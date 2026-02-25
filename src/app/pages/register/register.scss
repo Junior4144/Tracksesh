@@ -1,0 +1,72 @@
+.auth-page {
+  background: var(--bg-primary);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
+  color: var(--text-primary);
+}
+
+.brand-icon svg circle,
+.brand-icon svg line {
+  stroke: var(--accent);
+}
+
+.text-brand {
+  color: var(--accent);
+  letter-spacing: -0.5px;
+}
+
+.form-control {
+  background: var(--input-bg);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+
+  &::placeholder {
+    color: var(--text-muted);
+  }
+
+  &:focus {
+    background: var(--input-bg);
+    border-color: var(--accent);
+    color: var(--text-primary);
+    box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.15);
+  }
+}
+
+.btn-outline-secondary.toggle-pw {
+  background: var(--input-bg);
+  border-color: var(--border-color);
+  color: var(--text-muted);
+
+  &:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+  }
+}
+
+.form-label {
+  color: var(--text-primary);
+}
+
+hr {
+  border-color: var(--border-color);
+}
+
+.text-muted {
+  color: var(--text-muted) !important;
+}
+
+.link-accent {
+  color: var(--accent);
+  text-decoration: none;
+
+  &:hover {
+    color: var(--accent-hover);
+    text-decoration: underline;
+  }
+}

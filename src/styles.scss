@@ -1,0 +1,106 @@
+// ── Tracksesh Global Styles ──────────────────────────────────────────────────
+
+// ── Dark theme (default) ─────────────────────────────────────────────────────
+:root,
+[data-theme="dark"] {
+  --bg-primary:      #0f1117;
+  --bg-secondary:    #1a1d27;
+  --nav-bg:          rgba(15, 17, 23, 0.9);
+  --card-bg:         #1a1d27;
+  --input-bg:        #12151e;
+  --border-color:    #2a2d3a;
+  --text-primary:    #e8eaf0;
+  --text-muted:      #6b7080;
+  --accent:          #6c8df5;
+  --accent-rgb:      108, 141, 245;
+  --accent-hover:    #8aa4f7;
+  --ring-track:      #1e2133;
+  --warning:         #f5a623;
+  --success:         #34c88a;
+  --toggler-icon-filter: invert(1);
+}
+
+// ── Light theme ──────────────────────────────────────────────────────────────
+[data-theme="light"] {
+  --bg-primary:      #f5f6fa;
+  --bg-secondary:    #ffffff;
+  --nav-bg:          rgba(245, 246, 250, 0.92);
+  --card-bg:         #ffffff;
+  --input-bg:        #ffffff;
+  --border-color:    #dde1ed;
+  --text-primary:    #1a1d27;
+  --text-muted:      #7a7f90;
+  --accent:          #4a6cf7;
+  --accent-rgb:      74, 108, 247;
+  --accent-hover:    #3558e8;
+  --ring-track:      #e0e4f0;
+  --warning:         #e59b0f;
+  --success:         #1fa869;
+  --toggler-icon-filter: none;
+}
+
+// ── Base reset ───────────────────────────────────────────────────────────────
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+// ── Shared accent button ─────────────────────────────────────────────────────
+.btn-accent {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover,
+  &:focus {
+    background-color: var(--accent-hover);
+    border-color: var(--accent-hover);
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(var(--accent-rgb), 0.35);
+  }
+
+  &:disabled {
+    background-color: var(--accent);
+    border-color: var(--accent);
+    opacity: 0.6;
+  }
+}
+
+// ── Scrollbar ────────────────────────────────────────────────────────────────
+::-webkit-scrollbar              { width: 6px; }
+::-webkit-scrollbar-track        { background: var(--bg-secondary); }
+::-webkit-scrollbar-thumb        { background: var(--border-color); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover  { background: var(--text-muted); }
+
+// ── Bootstrap overrides ──────────────────────────────────────────────────────
+.alert-danger {
+  --bs-alert-color:      #ff6b7a;
+  --bs-alert-bg:         rgba(255, 107, 122, 0.1);
+  --bs-alert-border-color: rgba(255, 107, 122, 0.25);
+  font-size: 0.875rem;
+}
+
+.btn-outline-danger {
+  --bs-btn-color:              #ff6b7a;
+  --bs-btn-border-color:       rgba(255, 107, 122, 0.5);
+  --bs-btn-hover-color:        #fff;
+  --bs-btn-hover-bg:           #ff6b7a;
+  --bs-btn-hover-border-color: #ff6b7a;
+}
+
+.form-control.is-invalid:focus {
+  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.2);
+}

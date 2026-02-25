@@ -1,0 +1,210 @@
+<div class="dashboard d-flex flex-column min-vh-100">
+
+  <!-- Header greeting -->
+  <div class="dashboard-header text-center pt-5 pb-2">
+    @if (auth.currentUser(); as user) {
+      <p class="text-muted mb-1 small text-uppercase letter-spacing">Welcome back</p>
+      <h2 class="fw-bold mb-0">{{ user.name }}</h2>
+    } @else {
+      <p class="text-muted mb-1 small">
+        <a routerLink="/login" class="link-accent">Sign in</a> to save your sessions
+      </p>
+    }
+  </div>
+
+  <!-- Timer area -->
+  <main class="flex-grow-1 d-flex flex-column align-items-center justify-content-center gap-4">
+
+    <!-- State label -->
+    <p class="state-label fw-semibold mb-0" [class]="ringClass()">
+      {{ stateLabel() }}
+    </p>
+
+    <!-- Circular timer -->
+    <div class="timer-ring-wrapper position-relative" [class.pulse]="isRunning">
+      <svg
+        class="timer-svg"
+        [attr.width]="RADIUS * 2 + 40"
+        [attr.height]="RADIUS * 2 + 40"
+        [attr.viewBox]="'0 0 ' + (RADIUS * 2 + 40) + ' ' + (RADIUS * 2 + 40)"
+        aria-hidden="true"
+      >
+        <circle
+          class="ring-track"
+          [attr.cx]="RADIUS + 20"
+          [attr.cy]="RADIUS + 20"
+          [attr.r]="RADIUS"
+          fill="none"
+          stroke-width="10"
+        />
+        <circle
+          class="ring-progress"
+          [class]="ringClass()"
+          [attr.cx]="RADIUS + 20"
+          [attr.cy]="RADIUS + 20"
+          [attr.r]="RADIUS"
+          fill="none"
+          stroke-width="10"
+          stroke-linecap="round"
+          [attr.stroke-dasharray]="CIRCUMFERENCE"
+          [attr.stroke-dashoffset]="strokeDashoffset()"
+          transform-origin="center"
+          style="transform: rotate(-90deg); transform-box: fill-box;"
+        />
+      </svg>
+
+      <!-- Time display -->
+      <div class="timer-center position-absolute top-50 start-50 translate-middle text-center">
+        <div class="timer-display" [class.done]="isDone">
+          {{ timer.displayTime() }}
+        </div>
+        <div class="timer-sub text-muted small">
+          @if (!isDone) {
+            {{ timer.durationMinutes() }}-minute session
+          } @else {
+            Great work!
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="timer-controls d-flex gap-3 align-items-center">
+
+      @if (isIdle) {
+        <button class="btn btn-accent btn-lg px-5 fw-semibold" (click)="start()">
+          <svg class="me-2" width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
+            <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/>
+          </svg>
+          Start Session
+        </button>
+      }
+
+      @if (isRunning) {
+        <button class="btn btn-outline-accent px-4 fw-semibold" (click)="pause()">
+          <svg class="me-2" width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5zm5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5z"/>
+          </svg>
+          Pause
+        </button>
+        <button class="btn btn-ghost px-4" (click)="reset()">
+          <svg class="me-2" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+            <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+          </svg>
+          Reset
+        </button>
+      }
+
+      @if (isPaused) {
+        <button class="btn btn-accent btn-lg px-5 fw-semibold" (click)="resume()">
+          <svg class="me-2" width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
+            <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/>
+          </svg>
+          Resume
+        </button>
+        <button class="btn btn-ghost px-4" (click)="reset()">
+          <svg class="me-2" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+            <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+          </svg>
+          Reset
+        </button>
+      }
+
+      @if (isDone) {
+        <div class="text-center">
+          <div class="done-banner mb-3">
+            <svg class="me-2" width="28" height="28" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
+            </svg>
+            Session Complete
+          </div>
+          <button class="btn btn-accent btn-lg px-5 fw-semibold" (click)="reset()">
+            Start New Session
+          </button>
+        </div>
+      }
+
+    </div>
+
+    <!-- Duration editor / chips -->
+    @if (!isDone) {
+      <div class="duration-row d-flex flex-column align-items-center gap-2">
+
+        <!-- Login nudge toast -->
+        @if (loginPrompt()) {
+          <div class="login-nudge">
+            <svg class="me-1" width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+              <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+            </svg>
+            Sign in to customise session length
+          </div>
+        }
+
+        <!-- Inline editor (shown only when logged in and editing) -->
+        @if (editingDuration()) {
+          <div class="duration-editor d-flex align-items-center gap-2">
+            <label for="durInput" class="text-muted small mb-0">Session length</label>
+            <input
+              id="durInput"
+              type="number"
+              class="form-control form-control-sm duration-input"
+              [value]="draftMinutes()"
+              (input)="onDraftInput($event)"
+              min="1"
+              max="180"
+              autofocus
+              (keydown.enter)="applyDuration()"
+              (keydown.escape)="cancelEdit()"
+            />
+            <span class="text-muted small">min</span>
+            <button class="btn btn-accent btn-sm px-3" (click)="applyDuration()">Set</button>
+            <button class="btn btn-ghost btn-sm" (click)="cancelEdit()">Cancel</button>
+          </div>
+        } @else {
+          <!-- Chips row -->
+          <div class="session-chips d-flex gap-2 flex-wrap justify-content-center">
+            <!-- Editable duration chip -->
+            <button
+              class="chip chip-editable"
+              (click)="requestEdit()"
+              [disabled]="isRunning || isPaused"
+              [title]="isRunning || isPaused ? 'Reset the timer to change the duration' : (auth.isLoggedIn() ? 'Click to change session length' : 'Sign in to change session length')"
+            >
+              <svg class="me-1" width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/>
+                <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/>
+              </svg>
+              {{ timer.durationMinutes() }} min session
+              @if (!isRunning && !isPaused) {
+                <svg class="ms-1 edit-icon" width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207l6.5-6.5zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.499.499 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11l.178-.178z"/>
+                </svg>
+              }
+            </button>
+
+            <span class="chip">
+              <svg class="me-1" width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M14.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h13zm-13-1A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-13z"/>
+                <path d="M7 5.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm-1.496-.854a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0l-.5-.5a.5.5 0 1 1 .708-.708l.146.147 1.146-1.147a.5.5 0 0 1 .708 0zM7 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm-1.496-.854a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0l-.5-.5a.5.5 0 0 1 .708-.708l.146.147 1.146-1.147a.5.5 0 0 1 .708 0z"/>
+              </svg>
+              Flexible tracking
+            </span>
+
+            <span class="chip">
+              <svg class="me-1" width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+              </svg>
+              No distractions
+            </span>
+          </div>
+        }
+      </div>
+    }
+
+  </main>
+
+</div>

@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd C:/Users/Junior/Downloads/Tracksesh.UI && ng build --configuration=development 2>&1)"
+    ]
+  }
+}
