@@ -2,6 +2,7 @@ import { Component, signal, inject } from '@angular/core';
 import { FormBuilder, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { switchMap } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
 
 function passwordMatchValidator(control: AbstractControl): ValidationErrors | null {
@@ -46,7 +47,9 @@ export class RegisterComponent {
     this.error.set(null);
 
     const { email, password } = this.form.getRawValue();
-    this.auth.register(email, password).subscribe({
+    this.auth.register(email, password).pipe(
+      switchMap(() => this.auth.login(email, password))
+    ).subscribe({
       next: () => this.router.navigate(['/dashboard']),
       error: (err) => {
         this.error.set(err.error?.message ?? 'Registration failed. Please try again.');
