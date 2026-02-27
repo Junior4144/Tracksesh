@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { tap } from 'rxjs/operators';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface LoginResponse {
   name: string;
@@ -34,7 +35,7 @@ export class AuthService {
     return prefix.charAt(0).toUpperCase() + prefix.slice(1);
   });
 
-  readonly apiBaseUrl = 'https://localhost:7251';
+  readonly apiBaseUrl = environment.apiBaseUrl;
 
   private readonly SESSION_COOKIE      = 'tracksesh_session';
   private readonly SESSION_DURATION_MS = 15 * 60 * 1000; // 15 minutes
@@ -118,10 +119,12 @@ export class AuthService {
     }
   }
 
+  private readonly secureFlag = environment.production ? '; Secure' : '';
+
   private writeSession(data: SessionData) {
     const expires = new Date(data.expiry).toUTCString();
     document.cookie =
-      `${this.SESSION_COOKIE}=${encodeURIComponent(JSON.stringify(data))}; expires=${expires}; path=/; SameSite=Strict`;
+      `${this.SESSION_COOKIE}=${encodeURIComponent(JSON.stringify(data))}; expires=${expires}; path=/; SameSite=Strict${this.secureFlag}`;
   }
 
   private readSession(): SessionData | null {
@@ -132,6 +135,6 @@ export class AuthService {
   }
 
   private eraseSessionCookie() {
-    document.cookie = `${this.SESSION_COOKIE}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Strict`;
+    document.cookie = `${this.SESSION_COOKIE}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Strict${this.secureFlag}`;
   }
 }
