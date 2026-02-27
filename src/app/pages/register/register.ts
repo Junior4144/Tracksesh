@@ -27,7 +27,6 @@ export class RegisterComponent {
   private router = inject(Router);
 
   form = this.fb.nonNullable.group({
-    name: ['', [Validators.required, Validators.minLength(2)]],
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(8)]],
     confirmPassword: ['', Validators.required]
@@ -46,8 +45,8 @@ export class RegisterComponent {
     this.loading.set(true);
     this.error.set(null);
 
-    const { name, email, password } = this.form.getRawValue();
-    this.auth.register({ name, email, password }).subscribe({
+    const { email, password } = this.form.getRawValue();
+    this.auth.register(email, password).subscribe({
       next: () => this.router.navigate(['/dashboard']),
       error: (err) => {
         this.error.set(err.error?.message ?? 'Registration failed. Please try again.');
@@ -56,7 +55,6 @@ export class RegisterComponent {
     });
   }
 
-  get name() { return this.form.controls.name; }
   get email() { return this.form.controls.email; }
   get password() { return this.form.controls.password; }
   get confirmPassword() { return this.form.controls.confirmPassword; }

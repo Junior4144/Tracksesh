@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(cd C:/Users/Junior/Downloads/Tracksesh.UI && ng build --configuration=development 2>&1)"
+      "Bash(cd C:/Users/Junior/Downloads/Tracksesh.UI && ng build --configuration=development 2>&1)",
+      "mcp__ide__getDiagnostics"
     ]
   }
 }

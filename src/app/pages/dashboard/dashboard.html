@@ -2,9 +2,9 @@
 
   <!-- Header greeting -->
   <div class="dashboard-header text-center pt-5 pb-2">
-    @if (auth.currentUser(); as user) {
+    @if (auth.user()) {
       <p class="text-muted mb-1 small text-uppercase letter-spacing">Welcome back</p>
-      <h2 class="fw-bold mb-0">{{ user.name }}</h2>
+      <h2 class="fw-bold mb-0">{{ auth.displayName() }}</h2>
     } @else {
       <p class="text-muted mb-1 small">
         <a routerLink="/login" class="link-accent">Sign in</a> to save your sessions

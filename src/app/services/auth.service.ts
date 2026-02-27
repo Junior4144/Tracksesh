@@ -1,86 +1,137 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { of } from 'rxjs';
 import { tap } from 'rxjs/operators';
+import { Observable } from 'rxjs';
 
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface RegisterRequest {
+export interface LoginResponse {
   name: string;
   email: string;
-  password: string;
+  roles: string[];
 }
 
-export interface AuthResponse {
-  token: string;
+export interface User {
   name: string;
   email: string;
+  roles: string[];
+}
+
+interface SessionData {
+  expiry: number;
+  user: User;
 }
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly TOKEN_KEY = 'tracksesh_token';
-  private readonly USER_KEY = 'tracksesh_user';
+  http   = inject(HttpClient);
+  router = inject(Router);
 
-  private _token = signal<string | null>(localStorage.getItem(this.TOKEN_KEY));
-  private _user = signal<{ name: string; email: string } | null>(
-    JSON.parse(localStorage.getItem(this.USER_KEY) ?? 'null')
-  );
+  user        = signal<User | null>(null);
+  isLoggedIn  = computed(() => !!this.user());
+  displayName = computed(() => {
+    const prefix = this.user()?.email?.split('@')[0];
+    if (!prefix) return null;
+    return prefix.charAt(0).toUpperCase() + prefix.slice(1);
+  });
 
-  isLoggedIn = computed(() => !!this._token());
-  currentUser = computed(() => this._user());
+  readonly apiBaseUrl = 'https://localhost:7251';
 
-  // Base URL — swap this once your ASP.NET API is running
-  private readonly apiUrl = 'https://localhost:7001/api/auth';
+  private readonly SESSION_COOKIE      = 'tracksesh_session';
+  private readonly SESSION_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 
-  static readonly DEMO_EMAIL    = 'demo@tracksesh.com';
-  static readonly DEMO_PASSWORD = 'demo1234';
+  private logoutTimer: ReturnType<typeof setTimeout> | null = null;
+  private initPromise: Promise<void>;
 
-  constructor(private http: HttpClient, private router: Router) {}
-
-  login(payload: LoginRequest) {
-    if (
-      payload.email.trim().toLowerCase() === AuthService.DEMO_EMAIL &&
-      payload.password === AuthService.DEMO_PASSWORD
-    ) {
-      const mockRes: AuthResponse = {
-        token: 'demo-token',
-        name:  'Demo User',
-        email: AuthService.DEMO_EMAIL
-      };
-      return of(mockRes).pipe(tap(res => this.persist(res)));
-    }
-    return this.http.post<AuthResponse>(`${this.apiUrl}/login`, payload).pipe(
-      tap(res => this.persist(res))
-    );
+  constructor() {
+    this.initPromise = this.initialize();
   }
 
-  register(payload: RegisterRequest) {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/register`, payload).pipe(
-      tap(res => this.persist(res))
+  waitForInit(): Promise<boolean> {
+    return this.initPromise.then(() => this.isLoggedIn());
+  }
+
+  login(email: string, password: string): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(
+      `${this.apiBaseUrl}/api/auth/login`,
+      { email, password },
+      { withCredentials: true }
+    ).pipe(tap(res => this.setUser(res)));
+  }
+
+  register(email: string, password: string): Observable<void> {
+    return this.http.post<void>(
+      `${this.apiBaseUrl}/api/auth/register`,
+      { email, password },
+      { withCredentials: true }
     );
   }
 
   logout() {
-    localStorage.removeItem(this.TOKEN_KEY);
-    localStorage.removeItem(this.USER_KEY);
-    this._token.set(null);
-    this._user.set(null);
-    this.router.navigate(['/login']);
+    this.clearSession();
+    this.http.post<void>(`${this.apiBaseUrl}/api/auth/logout`, {}, { withCredentials: true })
+      .subscribe({ next: () => this.router.navigate(['/login']) });
   }
 
-  getToken(): string | null {
-    return this._token();
+  setUser(updatedUser: User | null) {
+    if (updatedUser) {
+      const normalized: User = {
+        name:  updatedUser.name,
+        email: updatedUser.email,
+        roles: updatedUser.roles.map(r => r.toLowerCase())
+      };
+      this.user.set(normalized);
+      const expiry = Date.now() + this.SESSION_DURATION_MS;
+      this.writeSession({ expiry, user: normalized });
+      this.scheduleAutoLogout(expiry);
+    } else {
+      this.clearSession();
+    }
   }
 
-  private persist(res: AuthResponse) {
-    localStorage.setItem(this.TOKEN_KEY, res.token);
-    localStorage.setItem(this.USER_KEY, JSON.stringify({ name: res.name, email: res.email }));
-    this._token.set(res.token);
-    this._user.set({ name: res.name, email: res.email });
+  // ── Session persistence ─────────────────────────────────────────────────────
+
+  private initialize(): Promise<void> {
+    const session = this.readSession();
+
+    if (session && Date.now() < session.expiry) {
+      this.user.set(session.user);
+      this.scheduleAutoLogout(session.expiry);
+    } else {
+      this.eraseSessionCookie();
+    }
+
+    return Promise.resolve();
+  }
+
+  private scheduleAutoLogout(expiryMs: number) {
+    if (this.logoutTimer !== null) clearTimeout(this.logoutTimer);
+    const remaining = expiryMs - Date.now();
+    this.logoutTimer = setTimeout(() => this.logout(), remaining > 0 ? remaining : 0);
+  }
+
+  private clearSession() {
+    this.user.set(null);
+    this.eraseSessionCookie();
+    if (this.logoutTimer !== null) {
+      clearTimeout(this.logoutTimer);
+      this.logoutTimer = null;
+    }
+  }
+
+  private writeSession(data: SessionData) {
+    const expires = new Date(data.expiry).toUTCString();
+    document.cookie =
+      `${this.SESSION_COOKIE}=${encodeURIComponent(JSON.stringify(data))}; expires=${expires}; path=/; SameSite=Strict`;
+  }
+
+  private readSession(): SessionData | null {
+    const match = document.cookie.match(new RegExp(`(?:^|; )${this.SESSION_COOKIE}=([^;]*)`));
+    if (!match) return null;
+    try { return JSON.parse(decodeURIComponent(match[1])); }
+    catch { return null; }
+  }
+
+  private eraseSessionCookie() {
+    document.cookie = `${this.SESSION_COOKIE}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Strict`;
   }
 }

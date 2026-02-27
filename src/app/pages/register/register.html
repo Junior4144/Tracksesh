@@ -25,25 +25,6 @@
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
 
       <div class="mb-3">
-        <label for="name" class="form-label fw-medium">Full name</label>
-        <input
-          id="name"
-          type="text"
-          class="form-control"
-          [class.is-invalid]="name.invalid && name.touched"
-          formControlName="name"
-          placeholder="Alex Johnson"
-          autocomplete="name"
-        />
-        @if (name.invalid && name.touched) {
-          <div class="invalid-feedback">
-            @if (name.errors?.['required']) { Name is required. }
-            @if (name.errors?.['minlength']) { Name must be at least 2 characters. }
-          </div>
-        }
-      </div>
-
-      <div class="mb-3">
         <label for="email" class="form-label fw-medium">Email address</label>
         <input
           id="email"
@@ -129,6 +110,22 @@
         }
       </button>
     </form>
+
+    <div class="demo-box mt-3">
+      <div class="demo-box__header">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
+        </svg>
+        Try the demo
+      </div>
+      <div class="demo-box__creds">
+        <span class="demo-cred"><span class="demo-label">Email</span>demo@tracksesh.com</span>
+        <span class="demo-cred"><span class="demo-label">Password</span>demo1234</span>
+      </div>
+      <a routerLink="/login" class="btn btn-demo w-100 mt-2 fw-semibold d-block text-center">
+        Sign in as Demo User
+      </a>
+    </div>
 
     <hr class="my-4">
 

@@ -1,6 +1,6 @@
 import { Component, signal, inject } from '@angular/core';
-import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
-import { Router, RouterLink, ActivatedRoute } from '@angular/router';
+import { Validators, ReactiveFormsModule, FormGroup, FormControl } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
 
@@ -12,49 +12,57 @@ import { AuthService } from '../../services/auth.service';
   styleUrl: './login.scss'
 })
 export class LoginComponent {
-  private fb     = inject(FormBuilder);
-  private auth   = inject(AuthService);
-  private router = inject(Router);
-  private route  = inject(ActivatedRoute);
+  authService = inject(AuthService);
+  router = inject(Router);
 
-  readonly demoEmail    = AuthService.DEMO_EMAIL;
-  readonly demoPassword = AuthService.DEMO_PASSWORD;
-
-  form = this.fb.nonNullable.group({
-    email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(6)]]
-  });
-
-  loading = signal(false);
-  error = signal<string | null>(null);
+  loading     = signal(false);
+  error       = signal<string | null>(null);
   showPassword = signal(false);
 
-  private get returnUrl(): string {
-    return this.route.snapshot.queryParamMap.get('returnUrl') ?? '/dashboard';
+  loginFormGroup = new FormGroup({
+    email: new FormControl<string>('', {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+    password: new FormControl<string>('', {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+  });
+
+  readonly DEMO_EMAIL    = 'demo@tracksesh.com';
+  readonly DEMO_PASSWORD = 'demo1234';
+
+  useDemo() {
+    this.loginFormGroup.setValue({ email: this.DEMO_EMAIL, password: this.DEMO_PASSWORD });
+    this.onSubmit();
   }
 
-  submit() {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
+  get emailFormControl(){
+    return this.loginFormGroup.controls.email;
+  }
+
+  get passwordFormControl(){
+    return this.loginFormGroup.controls.password;
+  }
+
+  onSubmit(){
+    if (this.loginFormGroup.invalid) {
+      this.loginFormGroup.markAllAsTouched();
       return;
     }
     this.loading.set(true);
     this.error.set(null);
 
-    this.auth.login(this.form.getRawValue()).subscribe({
-      next: () => this.router.navigateByUrl(this.returnUrl),
+    const { email, password } = this.loginFormGroup.getRawValue();
+    this.authService.login(email, password).subscribe({
+      next: () => {
+        this.router.navigate(['']);
+      },
       error: (err) => {
         this.error.set(err.error?.message ?? 'Invalid credentials. Please try again.');
         this.loading.set(false);
       }
     });
   }
-
-  useDemo() {
-    this.form.setValue({ email: this.demoEmail, password: this.demoPassword });
-    this.submit();
-  }
-
-  get email() { return this.form.controls.email; }
-  get password() { return this.form.controls.password; }
 }
