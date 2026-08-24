@@ -1,0 +1,135 @@
+.auth-page {
+  background: var(--bg-primary);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
+  color: var(--text-primary);
+}
+
+.brand-icon svg circle,
+.brand-icon svg line {
+  stroke: var(--accent);
+}
+
+.text-brand {
+  color: var(--accent);
+  letter-spacing: -0.5px;
+}
+
+.form-control {
+  background: var(--input-bg);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+
+  &::placeholder {
+    color: var(--text-muted);
+  }
+
+  &:focus {
+    background: var(--input-bg);
+    border-color: var(--accent);
+    color: var(--text-primary);
+    box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.15);
+  }
+}
+
+.btn-outline-secondary.toggle-pw {
+  background: var(--input-bg);
+  border-color: var(--border-color);
+  color: var(--text-muted);
+
+  &:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+  }
+}
+
+.form-label {
+  color: var(--text-primary);
+}
+
+hr {
+  border-color: var(--border-color);
+}
+
+.text-muted {
+  color: var(--text-muted) !important;
+}
+
+.link-accent {
+  color: var(--accent);
+  text-decoration: none;
+
+  &:hover {
+    color: var(--accent-hover);
+    text-decoration: underline;
+  }
+}
+
+// ── Demo box ─────────────────────────────────────────────────────────────────
+.demo-box {
+  border: 1px dashed var(--border-color);
+  border-radius: 0.6rem;
+  padding: 0.85rem 1rem;
+  background: var(--bg-secondary);
+}
+
+.demo-box__header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 0.6rem;
+}
+
+.demo-box__creds {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.demo-cred {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  font-family: 'Courier New', monospace;
+  color: var(--text-primary);
+}
+
+.demo-label {
+  font-family: system-ui, sans-serif;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  min-width: 60px;
+  font-weight: 500;
+}
+
+.btn-demo {
+  background: rgba(var(--accent-rgb), 0.1);
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
+  color: var(--accent);
+  font-size: 0.875rem;
+  border-radius: 0.4rem;
+  text-decoration: none;
+  transition: background 0.2s, border-color 0.2s;
+
+  &:hover:not(:disabled) {
+    background: rgba(var(--accent-rgb), 0.18);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+  }
+}
