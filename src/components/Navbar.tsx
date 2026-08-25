@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import { useTheme } from '@/components/ThemeProvider';
-import { BrandMark, ClockIcon, MoonIcon, SunIcon } from '@/components/icons';
+import { BarChartIcon, BrandMark, ClockIcon, MoonIcon, SunIcon } from '@/components/icons';
 
 export function Navbar() {
   const { isLoggedIn, displayName, logout } = useAuth();
@@ -53,6 +53,17 @@ export function Navbar() {
                   >
                     <ClockIcon className="me-1" size={15} />
                     Timer
+                  </Link>
+                </li>
+
+                <li className="nav-item">
+                  <Link
+                    className={`nav-link${isActive('/activity') ? ' active' : ''}`}
+                    href="/activity"
+                    onClick={() => setOpen(false)}
+                  >
+                    <BarChartIcon className="me-1" size={14} />
+                    Activity
                   </Link>
                 </li>
 

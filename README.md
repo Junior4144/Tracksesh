@@ -1,6 +1,11 @@
 # Tracksesh
 
-A focus-session timer. Next.js (App Router) + Supabase Auth, styled with Bootstrap 5.
+A time ledger: a stopwatch that records **what** you spent time on, so you can
+see where your hours went. Next.js (App Router) + Supabase, Bootstrap 5.
+
+Stop the clock and it asks "what did you do?"; you tag the block and it lands in
+your day. Time you forgot to track can be backfilled by hand. See
+[docs/DOMAIN.md](docs/DOMAIN.md) for the model everything is built to.
 
 Previously an Angular 21 SPA talking to a .NET API — see [Migration notes](#migration-notes-angular--nextjs).
 
@@ -12,8 +17,8 @@ cp .env.local.example .env.local   # then fill in the two values
 npm run dev                        # http://localhost:3000
 ```
 
-The app runs without Supabase configured — the dashboard and timer are public.
-Only sign-in/sign-up need the env vars, and they report clearly if they're missing.
+Supabase is required now that sessions are persisted: `/dashboard` reads and
+writes your blocks, so it redirects to sign-in when there's no user.
 
 ### Supabase
 
@@ -64,7 +69,9 @@ src/
     layout.tsx           shell: reads the session server-side, mounts providers
     page.tsx             -> /dashboard
     not-found.tsx        -> /dashboard  (was the '**' route)
-    dashboard/ login/ register/
+    dashboard/           the stopwatch
+    activity/            charts, day strip, backfill
+    login/ register/
   components/
     AuthProvider.tsx     Supabase auth: user, login, register, logout
     ThemeProvider.tsx    dark/light via <html data-theme>, no FOUC
@@ -96,15 +103,45 @@ Behaviour changes worth knowing:
   issues a JWT and refreshes it in `proxy.ts` on every request, which is what
   that hand-rolled `tracksesh_session` cookie was approximating.
 - **`auth.guard.ts` was never wired into any route** — the dashboard was always
-  public. That's preserved. `proxy.ts` only bounces signed-in users away from
-  `/login` and `/register`.
+  public, and the migration preserved that. It is no longer true: now that the
+  timer writes blocks under a user id, `proxy.ts` requires a user on
+  `/dashboard` and redirects to `/login?returnUrl=…` without one.
 - **`roles` is gone from the user object.** The .NET API returned it; nothing in
   the UI ever read it.
 - **Login validation is unchanged** (both fields required). The old template had
   branches for email-format and min-length errors, but those validators were
   never attached, so the branches were dead. Register does validate properly.
 
-Known issue carried over from the Angular version: the timer counts down with
-`setInterval` and one decrement per tick, so it runs slow in a backgrounded tab
-where browsers throttle timers. Fix is to store a target timestamp and derive
-the remaining seconds from `Date.now()`.
+- **The countdown is gone.** The timer counts *up*, open-ended — you don't know
+  in advance that you'll read for 36 minutes.
+
+The Angular drift bug (one decrement per `setInterval` tick, so the timer ran
+slow in a throttled background tab) is fixed by construction: elapsed time is
+derived from the stored `started_at` on every render rather than accumulated,
+so a missed tick costs nothing. `src/lib/useClock.ts` subscribes to the clock
+via `useSyncExternalStore` and re-reads it on tab focus.
+
+## Data model
+
+Two tables, both RLS-protected per user — see [docs/DOMAIN.md](docs/DOMAIN.md).
+
+| Table | Holds |
+|---|---|
+| `tags` | Your categories (Reading, Studying, …). Five are seeded on sign-up. |
+| `time_blocks` | The ledger. One row per labelled block; `ended_at is null` is the running session. |
+
+`tags.color` holds a palette **slot** (`blue`, `orange`, …), not a hex — each
+theme resolves its own step via `--series-*` in `globals.scss`, because a colour
+readable on the dark card isn't readable on white.
+
+The running stopwatch is a database row, not client state, so a refresh or a
+closed laptop can't lose it. A partial unique index enforces at most one running
+session per user.
+
+Stopwatch transitions go through `start_session` / `pause_session` /
+`resume_session` / `stop_session` RPCs rather than direct writes, so timestamps
+come from Postgres (not a skewed browser clock) and pause time accumulates in a
+single atomic statement.
+
+Apply migrations in `supabase/migrations/` in filename order — via the Supabase
+SQL Editor, or `supabase db push` against a linked project.

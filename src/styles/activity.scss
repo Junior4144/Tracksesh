@@ -1,0 +1,410 @@
+// ── Activity view ────────────────────────────────────────────────────────────
+// Mark specs follow the dataviz method: thin marks, rounded data-ends anchored
+// to the baseline, a 2px surface-coloured gap between adjacent fills, and
+// recessive grid lines. Text always wears text tokens — never a series colour.
+
+.activity {
+  max-width: 56rem;
+}
+
+.card-surface {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 0.85rem;
+}
+
+.chart-card {
+  padding: 1.15rem 1.25rem 1.25rem;
+}
+
+.chart-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+
+  @media (min-width: 62em) {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.chart-figure {
+  margin: 0;
+}
+
+.chart-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.9rem;
+}
+
+.chart-subtitle {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+// ── Range picker ─────────────────────────────────────────────────────────────
+.range-picker .btn {
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-muted);
+
+  &:hover { color: var(--text-primary); }
+
+  &.active {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: rgba(var(--accent-rgb), 0.1);
+  }
+}
+
+// ── Stat tiles ───────────────────────────────────────────────────────────────
+// A single number needs no chart.
+.stat-row {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, 1fr);
+
+  @media (min-width: 40em) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.stat-tile {
+  padding: 0.85rem 1rem;
+  border-radius: 0.75rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+
+  &.primary .stat-value { color: var(--accent); }
+}
+
+.stat-value {
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.stat-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+
+// ── Time per tag ─────────────────────────────────────────────────────────────
+.tag-total-row {
+  display: grid;
+  grid-template-columns: minmax(4.5rem, 7rem) 1fr auto auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.28rem 0;
+  font-size: 0.85rem;
+}
+
+.tag-total-name {
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tag-total-track {
+  height: 12px;
+  border-radius: 3px;
+  background: var(--ring-track);
+  overflow: hidden;
+}
+
+.tag-total-bar {
+  display: block;
+  height: 100%;
+  // Rounded at the data end only; the baseline end stays square so the bar
+  // reads as anchored rather than floating.
+  border-radius: 0 4px 4px 0;
+  min-width: 3px;
+  transition: width 0.25s ease;
+}
+
+.tag-total-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 3.4rem;
+  text-align: right;
+}
+
+.tag-total-share {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  min-width: 2.6rem;
+  text-align: right;
+  font-size: 0.78rem;
+}
+
+// ── Daily trend ──────────────────────────────────────────────────────────────
+.trend-plot {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 150px;
+  padding-bottom: 1.15rem;
+  position: relative;
+}
+
+.trend-col {
+  flex: 1 1 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  position: relative;
+  cursor: default;
+  border-radius: 3px;
+  outline: none;
+
+  &.hovered { background: rgba(var(--accent-rgb), 0.07); }
+  &:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
+}
+
+.trend-stack {
+  display: flex;
+  flex-direction: column-reverse;
+  min-height: 2px;
+  border-radius: 4px 4px 0 0;
+  overflow: hidden;
+}
+
+.trend-seg {
+  min-height: 2px;
+  // 2px of surface between stacked fills, so adjacent segments read as separate
+  // quantities rather than one blended block.
+  box-shadow: 0 -2px 0 0 var(--card-bg);
+
+  &:first-child { box-shadow: none; }
+}
+
+.trend-label {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 0.66rem;
+  color: var(--text-muted);
+}
+
+.trend-tooltip,
+.day-block-tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  min-width: 10rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.5rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.25);
+  font-size: 0.76rem;
+  color: var(--text-primary);
+  pointer-events: none;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.trend-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.1rem 0;
+}
+
+.trend-tooltip-total {
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--border-color);
+  color: var(--text-muted);
+}
+
+// ── Legend ───────────────────────────────────────────────────────────────────
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+  margin: 0.9rem 0 0;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex: 0 0 auto;
+  display: inline-block;
+}
+
+// ── Day strip ────────────────────────────────────────────────────────────────
+.day-strip-track {
+  position: relative;
+  min-height: 34px;
+  background: var(--ring-track);
+  border-radius: 0.4rem;
+}
+
+.day-strip-gridline {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border-color);
+  opacity: 0.55;
+}
+
+.day-block {
+  position: absolute;
+  height: 28px;
+  border-radius: 4px;
+  overflow: visible;
+  cursor: default;
+  // A 2px surface ring so overlapping blocks in adjacent lanes stay separable.
+  box-shadow: 0 0 0 2px var(--card-bg);
+
+  &.hovered { filter: brightness(1.12); }
+  &:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
+}
+
+.day-block-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #fff;
+  overflow: hidden;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.day-strip-axis {
+  position: relative;
+  height: 1.1rem;
+  margin-top: 0.3rem;
+
+  span {
+    position: absolute;
+    transform: translateX(-50%);
+    font-size: 0.66rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+// ── Session table ────────────────────────────────────────────────────────────
+// The table view is the exact-numbers companion to the charts, and the relief
+// the palette validator requires for the light-mode slots under 3:1 contrast.
+// It has to be readable in both themes, so every Bootstrap table variable is
+// mapped rather than left on its light defaults.
+.session-card {
+  padding: 0.35rem 0.25rem;
+  overflow: hidden;
+}
+
+.session-table {
+  --bs-table-color: var(--text-primary);
+  --bs-table-bg: transparent;
+  --bs-table-border-color: var(--border-color);
+  --bs-table-hover-color: var(--text-primary);
+  --bs-table-hover-bg: rgba(var(--accent-rgb), 0.07);
+  --bs-table-striped-color: var(--text-primary);
+  --bs-table-striped-bg: rgba(var(--accent-rgb), 0.035);
+
+  font-size: 0.84rem;
+  margin-bottom: 0;
+  vertical-align: middle;
+
+  th {
+    font-weight: 600;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    background: transparent;
+    border-bottom: 1px solid var(--border-color);
+    padding: 0.6rem 0.75rem;
+    white-space: nowrap;
+  }
+
+  td {
+    border-bottom: 1px solid var(--border-color);
+    padding: 0.55rem 0.75rem;
+    vertical-align: middle;
+    font-variant-numeric: tabular-nums;
+  }
+
+  // No rule under the final row — the card edge already closes the list.
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .session-tag {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    font-weight: 500;
+  }
+
+  .session-note {
+    max-width: 16rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // Row delete stays quiet until the row is hovered, so the column doesn't read
+  // as a wall of red.
+  .session-delete {
+    opacity: 0;
+    transition: opacity 0.12s ease;
+  }
+
+  tr:hover .session-delete,
+  .session-delete:focus-visible {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 34em) {
+  .session-table .session-note {
+    display: none;
+  }
+}
+
+// ── Add block form / empty state ─────────────────────────────────────────────
+.add-block {
+  padding: 1.25rem;
+}
+
+.empty-state {
+  border: 1px dashed var(--border-color);
+  border-radius: 0.85rem;
+  color: var(--text-primary);
+}

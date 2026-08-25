@@ -206,3 +206,139 @@
   text-decoration: none;
   &:hover { text-decoration: underline; }
 }
+
+// ── Stop button ───────────────────────────────────────────────────────────────
+// Deliberately not accent-coloured: stopping ends the session and opens the
+// labelling prompt, so it shouldn't read as the same weight as Start/Resume.
+.btn-stop {
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-primary);
+  border-radius: 999px;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+
+  &:hover:not(:disabled) {
+    border-color: var(--warning);
+    color: var(--warning);
+    background: rgba(245, 166, 35, 0.08);
+  }
+}
+
+.timer-error {
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  color: var(--warning);
+  background: rgba(245, 166, 35, 0.1);
+  border: 1px solid rgba(245, 166, 35, 0.3);
+}
+
+// ── Recent sessions ───────────────────────────────────────────────────────────
+.recent-blocks {
+  max-width: 30rem;
+  margin: 0 auto;
+  padding: 0 1rem 3rem;
+}
+
+.recent-title {
+  letter-spacing: 0.08em;
+}
+
+.recent-row {
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.9rem;
+
+  &:last-child { border-bottom: none; }
+}
+
+.recent-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.recent-total {
+  min-width: 3.5rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.recent-time {
+  font-variant-numeric: tabular-nums;
+}
+
+// ── "What did you do?" prompt ─────────────────────────────────────────────────
+.label-prompt-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(3px);
+  animation: prompt-fade 0.15s ease;
+}
+
+.label-prompt {
+  width: 100%;
+  max-width: 27rem;
+  padding: 1.75rem;
+  border-radius: 1rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+  animation: prompt-rise 0.18s ease;
+}
+
+@keyframes prompt-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes prompt-rise {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+// ── Tag chips ─────────────────────────────────────────────────────────────────
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  transition: border-color 0.15s ease, background 0.15s ease;
+
+  &:hover { border-color: var(--tag-color, var(--accent)); }
+
+  &.selected {
+    border-color: var(--tag-color, var(--accent));
+    background: color-mix(in srgb, var(--tag-color, var(--accent)) 14%, transparent);
+    font-weight: 600;
+  }
+}
+
+.tag-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tag-color, var(--accent));
+}
+
+.tag-chip-new {
+  border-style: dashed;
+  color: var(--text-muted);
+}
+
+.tag-create-input {
+  width: 9rem;
+}

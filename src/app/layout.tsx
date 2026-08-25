@@ -4,6 +4,7 @@ import '@/styles/globals.scss';
 import '@/styles/navbar.scss';
 import '@/styles/auth.scss';
 import '@/styles/dashboard.scss';
+import '@/styles/activity.scss';
 
 import { Navbar } from '@/components/Navbar';
 import { themeBootScript } from '@/components/ThemeProvider';
@@ -12,7 +13,7 @@ import { Providers } from './providers';
 
 export const metadata: Metadata = {
   title: 'Tracksesh',
-  description: 'Track your 50-minute study sessions with ease.',
+  description: 'Track where your time actually goes.',
   icons: { icon: '/TS.png' },
 };
 

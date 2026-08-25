@@ -4,6 +4,15 @@ import { NextResponse, type NextRequest } from 'next/server';
 /** Routes a signed-in user should never see. */
 const GUEST_ONLY = ['/login', '/register'];
 
+/**
+ * Routes that read or write the ledger, so they need a user.
+ *
+ * The dashboard used to be public — the Angular auth.guard was never wired to a
+ * route, and the migration preserved that. Now that the timer persists blocks
+ * under a user id, anonymous access has nothing to show and nowhere to write.
+ */
+const AUTH_ONLY = ['/dashboard', '/activity', '/tags'];
+
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
@@ -46,6 +55,13 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = '/dashboard';
     url.search = '';
+    return NextResponse.redirect(url);
+  }
+
+  if (!user && AUTH_ONLY.some((p) => pathname.startsWith(p))) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/login';
+    url.search = `?returnUrl=${encodeURIComponent(pathname)}`;
     return NextResponse.redirect(url);
   }
 

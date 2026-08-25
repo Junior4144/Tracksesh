@@ -1,20 +1,19 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/components/AuthProvider';
 import { useTimer } from '@/components/TimerProvider';
+import { SessionLabelPrompt } from '@/components/SessionLabelPrompt';
+import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
+import { fetchRecentBlocks } from '@/lib/blocks';
+import { blockDuration, formatClock, formatTotal } from '@/lib/time';
+import { slotColor, type TimeBlockWithTag } from '@/lib/types';
 import {
-  CheckCircleIcon,
-  CheckSmallIcon,
-  ClockIcon,
-  InfoIcon,
-  ListCheckIcon,
+  AlertIcon,
   PauseIcon,
-  PencilIcon,
   PlayIcon,
-  ResetIcon,
+  StopIcon,
+  TagIcon,
 } from '@/components/icons';
 
 const RADIUS = 120;
@@ -22,96 +21,52 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 const SVG_SIZE = RADIUS * 2 + 40;
 
 const STATE_LABEL = {
-  idle: 'Ready',
-  running: 'Focus time',
+  idle: 'Ready when you are',
+  running: 'Tracking',
   paused: 'Paused',
-  done: 'Session complete!',
 } as const;
 
 const RING_CLASS = {
   idle: 'ring-idle',
   running: 'ring-running',
   paused: 'ring-paused',
-  done: 'ring-done',
 } as const;
 
 export default function DashboardPage() {
   const timer = useTimer();
-  const { user, isLoggedIn, displayName } = useAuth();
-  const router = useRouter();
+  const { displayName } = useAuth();
 
-  const [editingDuration, setEditingDuration] = useState(false);
-  const [draftMinutes, setDraftMinutes] = useState(50);
-  const [loginPrompt, setLoginPrompt] = useState(false);
+  const [recent, setRecent] = useState<TimeBlockWithTag[]>([]);
 
-  const nudgeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    return () => {
-      if (nudgeTimer.current !== null) clearTimeout(nudgeTimer.current);
-    };
+  const loadRecent = useCallback(() => {
+    if (!isSupabaseConfigured()) return;
+    fetchRecentBlocks(createClient())
+      .then(setRecent)
+      .catch(() => {
+        // Non-essential panel; the timer still works without it.
+      });
   }, []);
 
-  const isRunning = timer.state === 'running';
-  const isPaused = timer.state === 'paused';
-  const isDone = timer.state === 'done';
-  const isIdle = timer.state === 'idle';
+  // Refresh the list whenever a session finishes being dealt with.
+  useEffect(() => {
+    if (!timer.pending) loadRecent();
+  }, [timer.pending, loadRecent]);
 
-  const ringClass = RING_CLASS[timer.state];
+  const ringClass = RING_CLASS[timer.status];
   const strokeDashoffset = CIRCUMFERENCE * (1 - timer.progress);
-
-  function requestEdit() {
-    // Can't change duration while a session is active.
-    if (isRunning || isPaused) return;
-
-    if (!isLoggedIn) {
-      // Flash the login nudge briefly, then redirect.
-      setLoginPrompt(true);
-      nudgeTimer.current = setTimeout(() => {
-        setLoginPrompt(false);
-        router.push('/login?returnUrl=/dashboard');
-      }, 1400);
-      return;
-    }
-
-    setDraftMinutes(timer.durationMinutes);
-    setEditingDuration(true);
-  }
-
-  function applyDuration() {
-    if (draftMinutes >= 1 && draftMinutes <= 180) {
-      timer.setDuration(draftMinutes);
-    }
-    setEditingDuration(false);
-  }
-
-  const editTitle = isRunning || isPaused
-    ? 'Reset the timer to change the duration'
-    : isLoggedIn
-      ? 'Click to change session length'
-      : 'Sign in to change session length';
+  const isIdle = timer.status === 'idle';
 
   return (
     <div className="dashboard d-flex flex-column min-vh-100">
       <div className="dashboard-header text-center pt-5 pb-2">
-        {user ? (
-          <>
-            <p className="text-muted mb-1 small text-uppercase letter-spacing">Welcome back</p>
-            <h2 className="fw-bold mb-0">{displayName}</h2>
-          </>
-        ) : (
-          <p className="text-muted mb-1 small">
-            <Link href="/login" className="link-accent">
-              Sign in
-            </Link>{' '}
-            to save your sessions
-          </p>
-        )}
+        <p className="text-muted mb-1 small text-uppercase letter-spacing">Welcome back</p>
+        <h2 className="fw-bold mb-0">{displayName}</h2>
       </div>
 
       <main className="flex-grow-1 d-flex flex-column align-items-center gap-4">
-        <p className={`state-label fw-semibold mb-0 ${ringClass}`}>{STATE_LABEL[timer.state]}</p>
+        <p className={`state-label fw-semibold mb-0 ${ringClass}`}>{STATE_LABEL[timer.status]}</p>
 
-        <div className={`timer-ring-wrapper position-relative${isRunning ? ' pulse' : ''}`}>
+        <div className={`timer-ring-wrapper position-relative${timer.status === 'running' ? ' pulse' : ''}`}>
           <svg
             className="timer-svg"
             width={SVG_SIZE}
@@ -146,125 +101,124 @@ export default function DashboardPage() {
           </svg>
 
           <div className="timer-center position-absolute top-50 start-50 translate-middle text-center">
-            <div className={`timer-display${isDone ? ' done' : ''}`}>{timer.displayTime}</div>
+            <div className="timer-display">{timer.displayTime}</div>
             <div className="timer-sub text-muted small">
-              {isDone ? 'Great work!' : `${timer.durationMinutes}-minute session`}
+              {isIdle
+                ? 'Press start when you begin'
+                : timer.block
+                  ? `Started ${formatClock(timer.block.started_at)}`
+                  : ''}
             </div>
           </div>
         </div>
 
         <div className="timer-controls d-flex gap-3 align-items-center">
           {isIdle && (
-            <button className="btn btn-accent btn-lg px-5 fw-semibold" onClick={timer.start}>
+            <button
+              className="btn btn-accent btn-lg px-5 fw-semibold"
+              onClick={timer.start}
+              disabled={timer.busy || !timer.ready}
+            >
               <PlayIcon className="me-2" size={18} />
-              Start Session
+              Start
             </button>
           )}
 
-          {isRunning && (
+          {timer.status === 'running' && (
             <>
-              <button className="btn btn-outline-accent px-4 fw-semibold" onClick={timer.pause}>
+              <button
+                className="btn btn-outline-accent px-4 fw-semibold"
+                onClick={timer.pause}
+                disabled={timer.busy}
+              >
                 <PauseIcon className="me-2" size={18} />
                 Pause
               </button>
-              <button className="btn btn-ghost px-4" onClick={timer.reset}>
-                <ResetIcon className="me-2" size={16} />
-                Reset
+              <button
+                className="btn btn-stop px-4 fw-semibold"
+                onClick={timer.stop}
+                disabled={timer.busy}
+              >
+                <StopIcon className="me-2" size={16} />
+                Stop
               </button>
             </>
           )}
 
-          {isPaused && (
+          {timer.status === 'paused' && (
             <>
-              <button className="btn btn-accent btn-lg px-5 fw-semibold" onClick={timer.start}>
+              <button
+                className="btn btn-accent btn-lg px-5 fw-semibold"
+                onClick={timer.resume}
+                disabled={timer.busy}
+              >
                 <PlayIcon className="me-2" size={18} />
                 Resume
               </button>
-              <button className="btn btn-ghost px-4" onClick={timer.reset}>
-                <ResetIcon className="me-2" size={16} />
-                Reset
+              <button
+                className="btn btn-stop px-4 fw-semibold"
+                onClick={timer.stop}
+                disabled={timer.busy}
+              >
+                <StopIcon className="me-2" size={16} />
+                Stop
               </button>
             </>
           )}
-
-          {isDone && (
-            <div className="text-center">
-              <div className="done-banner mb-3">
-                <CheckCircleIcon className="me-2" size={28} />
-                Session Complete
-              </div>
-              <button className="btn btn-accent btn-lg px-5 fw-semibold" onClick={timer.reset}>
-                Start New Session
-              </button>
-            </div>
-          )}
         </div>
 
-        {!isDone && (
-          <div className="duration-row d-flex flex-column align-items-center gap-2">
-            {loginPrompt && (
-              <div className="login-nudge">
-                <InfoIcon className="me-1" size={13} />
-                Sign in to customise session length
-              </div>
-            )}
-
-            {editingDuration ? (
-              <div className="duration-editor d-flex align-items-center gap-2">
-                <label htmlFor="durInput" className="text-muted small mb-0">
-                  Session length
-                </label>
-                <input
-                  id="durInput"
-                  type="number"
-                  className="form-control form-control-sm duration-input"
-                  value={draftMinutes}
-                  onChange={(e) =>
-                    setDraftMinutes(Number.isNaN(e.target.valueAsNumber) ? 1 : e.target.valueAsNumber)
-                  }
-                  min={1}
-                  max={180}
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') applyDuration();
-                    if (e.key === 'Escape') setEditingDuration(false);
-                  }}
-                />
-                <span className="text-muted small">min</span>
-                <button className="btn btn-accent btn-sm px-3" onClick={applyDuration}>
-                  Set
-                </button>
-                <button className="btn btn-ghost btn-sm" onClick={() => setEditingDuration(false)}>
-                  Cancel
-                </button>
-              </div>
-            ) : (
-              <div className="session-chips d-flex gap-2 flex-wrap justify-content-center">
-                <button
-                  className="chip chip-editable"
-                  onClick={requestEdit}
-                  disabled={isRunning || isPaused}
-                  title={editTitle}
-                >
-                  <ClockIcon className="me-1" size={12} />
-                  {timer.durationMinutes} min session
-                  {!isRunning && !isPaused && <PencilIcon className="ms-1 edit-icon" size={10} />}
-                </button>
-
-                <span className="chip">
-                  <ListCheckIcon className="me-1" size={12} />
-                  Flexible tracking
-                </span>
-
-                <span className="chip">
-                  <CheckSmallIcon className="me-1" size={12} />
-                  No distractions
-                </span>
-              </div>
-            )}
+        {timer.error && (
+          <div className="timer-error d-flex align-items-center gap-2">
+            <AlertIcon size={14} />
+            {timer.error}
           </div>
         )}
+
+        {recent.length > 0 && (
+          <section className="recent-blocks w-100">
+            <h3 className="recent-title text-muted small text-uppercase letter-spacing mb-2">
+              Recent
+            </h3>
+            <ul className="list-unstyled mb-0">
+              {recent.map((b) => (
+                <li key={b.id} className="recent-row d-flex align-items-center gap-2">
+                  <span
+                    className="recent-dot"
+                    style={{ background: slotColor(b.tag?.color) }}
+                  />
+                  <span className="recent-name flex-grow-1 text-truncate">
+                    {b.tag?.name ?? <span className="text-muted fst-italic">Unlabelled</span>}
+                    {b.note && <span className="text-muted small ms-2">{b.note}</span>}
+                  </span>
+                  <span className="recent-time text-muted small">
+                    {formatClock(b.started_at)}
+                  </span>
+                  <span className="recent-total fw-semibold small">
+                    {formatTotal(blockDuration(b))}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {isIdle && recent.length === 0 && (
+          <p className="text-muted small d-flex align-items-center gap-2">
+            <TagIcon size={13} />
+            Start the clock, and label the time when you stop.
+          </p>
+        )}
       </main>
+
+      {timer.pending && (
+        <SessionLabelPrompt
+          block={timer.pending}
+          busy={timer.busy}
+          onSave={(tagId, note) => timer.label(tagId, note)}
+          onDiscard={timer.discard}
+          onDismiss={timer.dismissPending}
+        />
+      )}
     </div>
   );
 }

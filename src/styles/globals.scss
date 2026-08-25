@@ -16,6 +16,12 @@
   --bs-body-color: #e8eaf0;
   --bs-body-color-rgb: 232, 234, 240;
   --bs-heading-color: #e8eaf0;
+  // Bootstrap components that paint their own surface (tables, modals,
+  // dropdowns, list groups) read these. Left unmapped they fall back to
+  // Bootstrap's light defaults and punch a white hole in the dark theme.
+  --bs-body-bg: #0f1117;
+  --bs-border-color: #2a2d3a;
+  --bs-emphasis-color: #e8eaf0;
   --accent:          #6c8df5;
   --accent-rgb:      108, 141, 245;
   --accent-hover:    #8aa4f7;
@@ -23,6 +29,20 @@
   --warning:         #f5a623;
   --success:         #34c88a;
   --toggler-icon-filter: invert(1);
+
+  // Categorical series, dark steps. Selected for the dark card surface, not
+  // flipped from the light set — validated against #1a1d27 for lightness,
+  // chroma, colour-blind separation of adjacent pairs, and contrast.
+  // Tags store the slot name; these resolve it. Fixed order, never cycled.
+  --series-blue:     #3987e5;
+  --series-orange:   #d95926;
+  --series-aqua:     #199e70;
+  --series-yellow:   #c98500;
+  --series-magenta:  #d55181;
+  --series-green:    #008300;
+  --series-violet:   #9085e9;
+  --series-red:      #e66767;
+  --series-none:     #6b7183; // unlabelled blocks
 }
 
 // ── Light theme ──────────────────────────────────────────────────────────────
@@ -38,10 +58,31 @@
   --accent:          #4a6cf7;
   --accent-rgb:      74, 108, 247;
   --accent-hover:    #3558e8;
+  --bs-body-bg:      #f5f6fa;
+  --bs-border-color: #dde1ed;
+  --bs-emphasis-color: #1a1d27;
+  --bs-body-color:   #1a1d27;
+  --bs-body-color-rgb: 26, 29, 39;
+  --bs-secondary-color: #7a7f90;
+  --bs-secondary-color-rgb: 122, 127, 144;
+  --bs-heading-color: #1a1d27;
   --ring-track:      #e0e4f0;
   --warning:         #e59b0f;
   --success:         #1fa869;
   --toggler-icon-filter: none;
+
+  // Same eight hues, light steps, validated against the white card surface.
+  // Aqua, yellow and magenta land under 3:1 there, so every mark using them
+  // carries a visible label — the tag name is never color-alone.
+  --series-blue:     #2a78d6;
+  --series-orange:   #eb6834;
+  --series-aqua:     #1baf7a;
+  --series-yellow:   #eda100;
+  --series-magenta:  #e87ba4;
+  --series-green:    #008300;
+  --series-violet:   #4a3aa7;
+  --series-red:      #e34948;
+  --series-none:     #8b90a0;
 }
 
 // ── Base reset ───────────────────────────────────────────────────────────────
