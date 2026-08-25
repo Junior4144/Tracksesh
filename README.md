@@ -57,9 +57,21 @@ with "Auto Confirm" checked) or the demo button will fail.
 | `npm run dev` | Dev server |
 | `npm run build` | Production build (emits `.next/standalone` for Docker) |
 | `npm start` | Serve the production build |
-| `npm test` | Vitest suite |
+| `npm test` | Vitest suite (pure logic, jsdom) |
+| `npm run e2e` | Playwright layout checks in a real browser |
+| `npm run e2e:shots` | Screenshots → `test-results/screens/` |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `tsc --noEmit` |
+
+Both test layers exist because they catch different things. Vitest runs on
+jsdom, which has **no layout engine and never evaluates a media query** — it
+cannot tell you that a grid column collapsed or a panel landed at the bottom of
+the page. `npm run e2e` measures real boxes at three viewport widths and asserts
+the dashboard's columns actually sit side by side. Both need the dev server;
+Playwright starts one itself.
+
+`e2e:shots` captures every page in both themes at all three widths — the fastest
+way to see the effect of a style change.
 
 ## Layout
 

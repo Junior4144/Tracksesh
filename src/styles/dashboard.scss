@@ -235,9 +235,21 @@
 
 // ── Recent sessions ───────────────────────────────────────────────────────────
 .recent-blocks {
-  max-width: 30rem;
+  width: 100%;
+  max-width: 34rem;
   margin: 0 auto;
-  padding: 0 1rem 3rem;
+  padding: 0 1rem;
+  // Sits under the timer controls inside the centre column.
+  margin-top: 0.5rem;
+}
+
+.recent-more {
+  display: inline-block;
+  margin-top: 0.75rem;
+  font-size: 0.78rem;
+  text-decoration: none;
+
+  &:hover { text-decoration: underline; }
 }
 
 .recent-title {
@@ -341,4 +353,209 @@
 
 .tag-create-input {
   width: 9rem;
+}
+
+// ── Info panels ───────────────────────────────────────────────────────────────
+// Reusable closeable explainer. See components/panels/InfoPanel.tsx.
+.info-panel {
+  width: 100%;
+  padding: 1.15rem 1.25rem 1.25rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 0.85rem;
+  animation: panel-in 0.2s ease;
+}
+
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.info-panel-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+}
+
+.info-panel-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.12);
+}
+
+.info-panel-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0.2rem 0 0;
+  color: var(--text-primary);
+}
+
+.info-panel-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0.15rem 0 0;
+}
+
+.info-panel-close {
+  flex: 0 0 auto;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 0.4rem;
+  padding: 0.25rem;
+  line-height: 0;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+
+  &:hover {
+    color: var(--text-primary);
+    background: rgba(var(--bs-body-color-rgb), 0.08);
+  }
+}
+
+.info-panel-body {
+  margin-top: 0.9rem;
+}
+
+// ── Numbered steps ────────────────────────────────────────────────────────────
+.panel-steps {
+  list-style: none;
+  margin: 0 0 0.9rem;
+  padding: 0;
+
+  li {
+    display: flex;
+    gap: 0.6rem;
+    padding: 0.4rem 0;
+    font-size: 0.84rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+  }
+}
+
+.panel-step-number {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  margin-top: 0.12rem;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.12);
+}
+
+.panel-step-title {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.panel-note {
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+  margin-bottom: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--border-color);
+}
+
+// ── Collapsed state ───────────────────────────────────────────────────────────
+// Closing hides the panel but never the way back to it.
+.panel-restore {
+  // flex + fit-content, not inline-flex: margin auto only centres a
+  // block-level box, and this sits alone in a full-width grid column.
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  gap: 0.4rem;
+  margin-inline: auto;
+  padding: 0.3rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px dashed var(--border-color);
+  transition: color 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+}
+
+// ── Three-column dashboard ────────────────────────────────────────────────────
+// Wide screens had two large empty gutters either side of the timer, so the
+// explainer moves into the left one and the timer stays optically centred.
+//
+// Source order is centre, left — the sides are positioned by grid-column, so
+// the narrow single-column stack still leads with the timer rather than making
+// a phone user scroll past the explainer to reach Start.
+.dashboard-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2rem 1.5rem;
+  padding: 0 1rem 3rem;
+  align-content: start;
+  justify-items: center;
+}
+
+.dash-center {
+  width: 100%;
+  max-width: 34rem;
+}
+
+.dash-side {
+  width: 100%;
+  max-width: 34rem;
+}
+
+// 62em (992px), not 75em. The ring is 280px and the gutters need ~210px each,
+// so three columns fit comfortably from here — and a laptop window with a
+// docked editor or panel is very often under 1200px, which was silently
+// dropping the explainer to the bottom of the page.
+@media (min-width: 62em) {
+  .dashboard-layout {
+    // Symmetric minmax: both gutters resize by the same amount, so the centre
+    // column stays centred at every width instead of drifting.
+    grid-template-columns:
+      minmax(12rem, 19rem)
+      minmax(20rem, 1fr)
+      minmax(12rem, 19rem);
+    align-items: start;
+    max-width: 78rem;
+    margin: 0 auto;
+    padding-inline: 1.5rem;
+  }
+
+  // Three independent columns, all on one row. Each sizes itself, so however
+  // tall the left panel grows it cannot move anything in the centre column.
+  //
+  // grid-row is explicit and required. The centre column comes first in source
+  // order (so the narrow stack leads with the timer), which leaves the
+  // auto-placement cursor past column 1 — and sparse packing only moves
+  // forward, so a bare `grid-column: 1` lands the panel on a new row underneath
+  // instead of beside the timer.
+  .dash-side-left  { grid-column: 1; grid-row: 1; }
+  .dash-center     { grid-column: 2; grid-row: 1; }
+  // Reserved, currently empty: column 3 keeps the timer optically centred, and
+  // is the slot a second <InfoPanel> drops into without touching this grid.
+  .dash-side-right { grid-column: 3; grid-row: 1; }
+
+  // Nudged down so the panel sits level with the ring rather than the state
+  // label, which is a much lighter piece of type.
+  .dash-side {
+    position: sticky;
+    top: 5.5rem;
+    padding-top: 2.5rem;
+  }
 }

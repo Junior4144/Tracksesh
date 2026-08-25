@@ -1,9 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
 import { useTimer } from '@/components/TimerProvider';
 import { SessionLabelPrompt } from '@/components/SessionLabelPrompt';
+import { HowItWorks } from '@/components/panels/HowItWorks';
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { fetchRecentBlocks } from '@/lib/blocks';
 import { blockDuration, formatClock, formatTotal } from '@/lib/time';
@@ -13,7 +15,6 @@ import {
   PauseIcon,
   PlayIcon,
   StopIcon,
-  TagIcon,
 } from '@/components/icons';
 
 const RADIUS = 120;
@@ -63,8 +64,15 @@ export default function DashboardPage() {
         <h2 className="fw-bold mb-0">{displayName}</h2>
       </div>
 
-      <main className="flex-grow-1 d-flex flex-column align-items-center gap-4">
-        <p className={`state-label fw-semibold mb-0 ${ringClass}`}>{STATE_LABEL[timer.status]}</p>
+      {/*
+        Three columns on a wide screen: the timer stays optically centred while
+        the explainer and the recent list fill the gutters that were empty.
+        Source order is centre-first, so the narrow single-column stack still
+        leads with the timer — the sides are placed by grid-column, not order.
+      */}
+      <main className="dashboard-layout flex-grow-1">
+        <div className="dash-center d-flex flex-column align-items-center gap-4">
+          <p className={`state-label fw-semibold mb-0 ${ringClass}`}>{STATE_LABEL[timer.status]}</p>
 
         <div className={`timer-ring-wrapper position-relative${timer.status === 'running' ? ' pulse' : ''}`}>
           <svg
@@ -167,47 +175,47 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {timer.error && (
-          <div className="timer-error d-flex align-items-center gap-2">
-            <AlertIcon size={14} />
-            {timer.error}
-          </div>
-        )}
+          {timer.error && (
+            <div className="timer-error d-flex align-items-center gap-2">
+              <AlertIcon size={14} />
+              {timer.error}
+            </div>
+          )}
 
-        {recent.length > 0 && (
-          <section className="recent-blocks w-100">
-            <h3 className="recent-title text-muted small text-uppercase letter-spacing mb-2">
-              Recent
-            </h3>
-            <ul className="list-unstyled mb-0">
-              {recent.map((b) => (
-                <li key={b.id} className="recent-row d-flex align-items-center gap-2">
-                  <span
-                    className="recent-dot"
-                    style={{ background: slotColor(b.tag?.color) }}
-                  />
-                  <span className="recent-name flex-grow-1 text-truncate">
-                    {b.tag?.name ?? <span className="text-muted fst-italic">Unlabelled</span>}
-                    {b.note && <span className="text-muted small ms-2">{b.note}</span>}
-                  </span>
-                  <span className="recent-time text-muted small">
-                    {formatClock(b.started_at)}
-                  </span>
-                  <span className="recent-total fw-semibold small">
-                    {formatTotal(blockDuration(b))}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
+          {/* Inside the centre column, not a row beneath the whole grid — so a
+              long panel in the left column can never push this down. */}
+          {recent.length > 0 && (
+            <section className="recent-blocks">
+              <h3 className="recent-title text-muted small text-uppercase letter-spacing mb-2">
+                Recent
+              </h3>
+              <ul className="list-unstyled mb-0">
+                {recent.map((b) => (
+                  <li key={b.id} className="recent-row d-flex align-items-center gap-2">
+                    <span className="recent-dot" style={{ background: slotColor(b.tag?.color) }} />
+                    <span className="recent-name flex-grow-1 text-truncate">
+                      {b.tag?.name ?? <span className="text-muted fst-italic">Unlabelled</span>}
+                      {b.note && <span className="text-muted small ms-2">{b.note}</span>}
+                    </span>
+                    <span className="recent-time text-muted small">
+                      {formatClock(b.started_at)}
+                    </span>
+                    <span className="recent-total fw-semibold small">
+                      {formatTotal(blockDuration(b))}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <Link href="/activity" className="recent-more link-accent">
+                See all activity →
+              </Link>
+            </section>
+          )}
+        </div>
 
-        {isIdle && recent.length === 0 && (
-          <p className="text-muted small d-flex align-items-center gap-2">
-            <TagIcon size={13} />
-            Start the clock, and label the time when you stop.
-          </p>
-        )}
+        <aside className="dash-side dash-side-left">
+          <HowItWorks />
+        </aside>
       </main>
 
       {timer.pending && (
