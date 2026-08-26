@@ -10,6 +10,17 @@ on:
         required: true
         default: ''
 
+# One deploy at a time, and never cancelled halfway.
+#
+# Two concurrent runs would both push an image and then both ask for "the newest
+# one", and at least one would deploy the other's build. `cancel-in-progress` is
+# deliberately false: aborting between the push and the deployment leaves the
+# service on its old version with an orphaned image, which is recoverable but
+# confusing.
+concurrency:
+  group: deploy-lightsail
+  cancel-in-progress: false
+
 permissions:
   # OIDC: GitHub mints a short-lived token AWS trusts, so there is no long-lived
   # access key sitting in this repository's secrets to leak or rotate. See
@@ -57,8 +68,18 @@ jobs:
 
       # ── Push ────────────────────────────────────────────────────────────
       #
-      # Lightsail rewrites the tag to `:<service>.<label>.<n>` and only that
-      # name is deployable, so it has to be read back out rather than assumed.
+      # `aws lightsail push-container-image` is not self-contained: it shells out
+      # to a separate binary, lightsailctl, which does the actual upload. The AWS
+      # CLI ships without it and GitHub's runners do not have it, so the command
+      # fails with "the Lightsail Control (lightsailctl) plugin was not found"
+      # before it makes a single API call.
+      - name: Install the lightsailctl plugin
+        run: |
+          curl -fsSL "https://s3.us-west-2.amazonaws.com/lightsailctl/latest/linux-amd64/lightsailctl" \
+            -o /tmp/lightsailctl
+          sudo install -m 755 /tmp/lightsailctl /usr/local/bin/lightsailctl
+          command -v lightsailctl
+
       - name: Push to Lightsail
         id: push
         run: |
@@ -66,14 +87,27 @@ jobs:
             --region "$AWS_REGION" \
             --service-name "$SERVICE_NAME" \
             --label app \
-            --image "tracksesh:${{ github.sha }}" | tee "$RUNNER_TEMP/push.log"
+            --image "tracksesh:${{ github.sha }}"
 
-          IMAGE=$(grep -oE '"?:[a-zA-Z0-9._-]+\.app\.[0-9]+"?' "$RUNNER_TEMP/push.log" | tail -1 | tr -d '"')
-          if [ -z "$IMAGE" ]; then
+          # Lightsail rewrites the tag to `:<service>.<label>.<n>` and only that
+          # name is deployable, so it has to be read back rather than assumed.
+          #
+          # Asked for, not scraped from the command's output: the human-readable
+          # line it prints is not a contract, and a wording change would leave
+          # this parsing a message that no longer contains what it wants. Sorting
+          # by createdAt rather than trusting the list order makes "the one we
+          # just pushed" explicit.
+          IMAGE=$(aws lightsail get-container-images \
+            --region "$AWS_REGION" \
+            --service-name "$SERVICE_NAME" \
+            --query 'sort_by(containerImages, &createdAt)[-1].image' \
+            --output text)
+
+          if [ -z "$IMAGE" ] || [ "$IMAGE" = "None" ]; then
             echo "::error::Could not determine the pushed image name."
-            cat "$RUNNER_TEMP/push.log"
             exit 1
           fi
+
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
           echo "Pushed $IMAGE"
 
