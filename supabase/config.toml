@@ -495,3 +495,22 @@ enabled = true
 # declarative_schema_path = "./schemas"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+# ---------------------------------------------------------------------------
+# Per-project overrides.
+#
+# Everything above is tuned for the local stack, and one of those settings is
+# actively dangerous to push: `enable_confirmations = false` exists so `npm run
+# e2e` and the demo account don't need an inbox round trip. Sent to a real
+# project it means anyone can sign up as any address, including one they do not
+# own, and be signed in immediately.
+#
+# `supabase config push` applies the block whose project_id matches the linked
+# project, layered over the base config — so local stays convenient and
+# production stays correct, from one file.
+# ---------------------------------------------------------------------------
+[remotes.production]
+project_id = "hrisygvrmvvozsvoblpv"
+
+[remotes.production.auth.email]
+enable_confirmations = true
