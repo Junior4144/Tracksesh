@@ -5,7 +5,15 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import { useTheme } from '@/components/ThemeProvider';
-import { BarChartIcon, BrandMark, ClockIcon, MoonIcon, SunIcon, TagIcon } from '@/components/icons';
+import {
+  BarChartIcon,
+  BrandMark,
+  ClockIcon,
+  MoonIcon,
+  PersonIcon,
+  SunIcon,
+  TagIcon,
+} from '@/components/icons';
 
 export function Navbar() {
   const { isLoggedIn, displayName, logout } = useAuth();
@@ -79,7 +87,18 @@ export function Navbar() {
                 </li>
 
                 <li className="nav-item">
-                  <span className="nav-user-name d-none d-md-inline-block px-2 text-muted small">
+                  <Link
+                    className={`nav-link${isActive('/account') ? ' active' : ''}`}
+                    href="/account"
+                    onClick={() => setOpen(false)}
+                  >
+                    <PersonIcon className="me-1" size={14} />
+                    Account
+                  </Link>
+                </li>
+
+                <li className="nav-item">
+                  <span className="nav-user-name d-none d-lg-inline-block px-2 text-muted small">
                     Welcome back, {displayName}
                   </span>
                 </li>

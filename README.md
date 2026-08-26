@@ -5,7 +5,8 @@ see where your hours went. Next.js (App Router) + Supabase, Bootstrap 5.
 
 Stop the clock and it asks "what did you do?"; you tag the block and it lands in
 your day. Time you forgot to track can be backfilled by hand. See
-[docs/DOMAIN.md](docs/DOMAIN.md) for the model everything is built to.
+[docs/DOMAIN.md](docs/DOMAIN.md) for the model everything is built to, and
+[docs/TODO.md](docs/TODO.md) for what is still missing.
 
 Previously an Angular 21 SPA talking to a .NET API — see [Migration notes](#migration-notes-angular--nextjs).
 
@@ -41,10 +42,27 @@ inlined into the browser bundle at **build** time; the Docker build and CI will
 need them too, not just runtime. Never put a `sb_secret_…` key behind a
 `NEXT_PUBLIC_` name.
 
-**Email confirmation:** on by default. With it on, sign-up doesn't create a
-session and the register page tells the user to check their inbox. Turn it off
-under Authentication → Providers → Email to get the old
-register-then-straight-in flow.
+**Email confirmation:** on by default on a hosted project, off in
+`supabase/config.toml` so the local stack and `npm run e2e` don't need an inbox.
+With it on, sign-up doesn't create a session and the register page tells the
+user to check their inbox.
+
+**Emailed links go through `/auth/confirm`.** Both templates live in
+`supabase/templates/` and build their own link from `{{ .TokenHash }}` rather
+than the default `{{ .ConfirmationURL }}`: `@supabase/ssr` forces the PKCE flow,
+whose `?code=` only resolves in the browser that started it, so a link opened on
+another device would fail. `/auth/confirm` verifies the token hash server-side
+instead. `supabase config push` sends the templates and URL settings to the
+linked project, so they're version-controlled rather than edited in the
+dashboard.
+
+Every link is built from `site_url`, so **set it to your deployed origin before
+shipping** — locally it is `http://localhost:3000`, and it has to be the host
+the dev server actually serves (see `allowedDevOrigins` in `next.config.ts`).
+
+**Testing auth locally:** nothing leaves the machine. Mail lands in Mailpit at
+http://127.0.0.1:54324 — sign up or hit "Forgot password?" and read the link
+there. Flipping `enable_confirmations` needs `supabase stop && supabase start`.
 
 **Demo user:** the login page advertises `demo@tracksesh.com` / `demo1234`.
 Create that user in your Supabase project (Authentication → Users → Add user,
@@ -84,15 +102,21 @@ src/
     dashboard/           the stopwatch
     activity/            charts, day strip, backfill, block editing
     tags/                rename, recolour, archive, delete
-    login/ register/
+    account/             change password, export, delete account
+      update-password/   where a recovery link lands
+    auth/confirm/        route handler: verifies emailed token hashes
+    auth/link-expired/   where a dead link lands
+    login/ register/ forgot-password/
   components/
-    AuthProvider.tsx     Supabase auth: user, login, register, logout
+    AuthProvider.tsx     Supabase auth: session, password reset, account deletion
     ThemeProvider.tsx    dark/light via <html data-theme>, no FOUC
     TimerProvider.tsx    the session timer; above the router so it survives navigation
     ConfirmDialog.tsx    the gate in front of anything with no undo
+    PasswordInput.tsx    password field with a show/hide toggle
     Navbar.tsx  icons.tsx
   lib/supabase/          browser / server / proxy clients
   lib/edits.ts           block + tag validation, mirroring the check constraints
+  lib/export.ts          the account export payload
   proxy.ts               refreshes the session, keeps signed-in users off /login
   styles/                global SCSS (carried over from Angular unchanged)
 ```

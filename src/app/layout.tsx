@@ -6,6 +6,7 @@ import '@/styles/auth.scss';
 import '@/styles/dashboard.scss';
 import '@/styles/activity.scss';
 import '@/styles/tags.scss';
+import '@/styles/account.scss';
 
 import { Navbar } from '@/components/Navbar';
 import { themeBootScript } from '@/components/ThemeProvider';

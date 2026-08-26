@@ -151,6 +151,23 @@ export async function fetchBlocksInRange(
   return (data ?? []) as unknown as TimeBlockWithTag[];
 }
 
+/**
+ * Every block the user has, oldest first — the account export.
+ *
+ * Unbounded on purpose: an export that silently stopped at N rows would be
+ * worse than no export at all. A personal ledger is a few thousand rows at
+ * most, and this runs once, by hand.
+ */
+export async function fetchAllBlocks(supabase: SupabaseClient): Promise<TimeBlockWithTag[]> {
+  const { data, error } = await supabase
+    .from('time_blocks')
+    .select(BLOCK_WITH_TAG)
+    .order('started_at', { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []) as unknown as TimeBlockWithTag[];
+}
+
 export async function fetchRecentBlocks(
   supabase: SupabaseClient,
   limit = 8
