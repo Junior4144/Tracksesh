@@ -186,15 +186,33 @@ enabled = true
 #
 # Set this to the deployed origin before shipping, and mirror it in the hosted
 # project's Auth → URL Configuration (or `supabase config push`).
-# 5173 is Vite's dev port. In production this is the origin the .NET API
-# serves the SPA from, since the same process serves both.
-site_url = "http://localhost:5173"
+# The deployed origin. Every emailed link — sign-up confirmation, password
+# recovery — is built from this, so a stale value here sends real users to a
+# machine that isn't theirs.
+#
+# No trailing slash: GoTrue concatenates paths onto it, and a slash here
+# produces links with a double slash that some mail clients mangle.
+#
+# When tracksesh.com is attached to the container service, change this to
+# https://tracksesh.com, leave the Lightsail URL in the allow list below, and
+# re-run the migrate workflow to push it.
+site_url = "https://tracksesh.vnf5wpysjg2mc.us-west-2.cs.amazonlightsail.com"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-# 5251 is the API serving a production build of the SPA — the shape a
-# deployment actually has, so emailed links can be tested against it too.
-additional_redirect_urls = ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5251", "http://127.0.0.1:5251"]
+# Exact matches only — no wildcards, no prefixes.
+#
+# The deployed origin has to be listed here as well as in site_url; site_url is
+# the default destination, this is the permitted set. The localhost entries stay
+# so development keeps working: 5173 is Vite, 5251 is the API serving a
+# production build, which is the shape a deployment actually has.
+additional_redirect_urls = [
+  "https://tracksesh.vnf5wpysjg2mc.us-west-2.cs.amazonlightsail.com",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "http://localhost:5251",
+  "http://127.0.0.1:5251",
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
