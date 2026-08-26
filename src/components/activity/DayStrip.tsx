@@ -16,7 +16,16 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * overlap on purpose (you can be on a call while commuting), so the view has to
  * render it honestly instead of hiding one of them.
  */
-export function DayStrip({ day, blocks }: { day: Date; blocks: TimeBlockWithTag[] }) {
+export function DayStrip({
+  day,
+  blocks,
+  onSelect,
+}: {
+  day: Date;
+  blocks: TimeBlockWithTag[];
+  /** Opens the block for editing — the strip is where a misplaced one is spotted. */
+  onSelect?: (block: TimeBlockWithTag) => void;
+}) {
   const [hovered, setHovered] = useState<number | null>(null);
 
   const dayStart = startOfDay(day).getTime();
@@ -72,7 +81,7 @@ export function DayStrip({ day, blocks }: { day: Date; blocks: TimeBlockWithTag[
             return (
               <div
                 key={block.id}
-                className={`day-block${hovered === block.id ? ' hovered' : ''}`}
+                className={`day-block${hovered === block.id ? ' hovered' : ''}${onSelect ? ' selectable' : ''}`}
                 style={{
                   left: `${left}%`,
                   width: `max(${width}%, 3px)`,
@@ -83,8 +92,23 @@ export function DayStrip({ day, blocks }: { day: Date; blocks: TimeBlockWithTag[
                 onMouseLeave={() => setHovered(null)}
                 onFocus={() => setHovered(block.id)}
                 onBlur={() => setHovered(null)}
+                onClick={onSelect && (() => onSelect(block))}
+                onKeyDown={
+                  onSelect &&
+                  ((e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onSelect(block);
+                    }
+                  })
+                }
+                role={onSelect ? 'button' : undefined}
                 tabIndex={0}
-                title={`${block.tag?.name ?? 'Unlabelled'} · ${formatClock(block.started_at)}–${formatClock(block.ended_at!)}`}
+                title={
+                  onSelect
+                    ? `${block.tag?.name ?? 'Unlabelled'} · ${formatClock(block.started_at)}–${formatClock(block.ended_at!)} — click to edit`
+                    : `${block.tag?.name ?? 'Unlabelled'} · ${formatClock(block.started_at)}–${formatClock(block.ended_at!)}`
+                }
               >
                 <span className="day-block-label">{block.tag?.name ?? 'Unlabelled'}</span>
 

@@ -59,5 +59,10 @@ test('capture screens', async ({ page }, testInfo) => {
       await page.waitForTimeout(400);
       await page.screenshot({ path: `${dir}/activity-day-${theme}.png`, fullPage: true });
     }
+
+    await page.goto('/tags');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(600);
+    await page.screenshot({ path: `${dir}/tags-${theme}.png`, fullPage: true });
   }
 });

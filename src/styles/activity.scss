@@ -288,6 +288,10 @@
 
   &.hovered { filter: brightness(1.12); }
   &:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
+
+  // The strip is where a misplaced block is spotted, so it's also where it's
+  // opened for editing.
+  &.selectable { cursor: pointer; }
 }
 
 .day-block-label {
@@ -379,15 +383,22 @@
     white-space: nowrap;
   }
 
-  // Row delete stays quiet until the row is hovered, so the column doesn't read
-  // as a wall of red.
-  .session-delete {
+  // Row actions stay quiet until the row is hovered, so the column doesn't read
+  // as a wall of icons — and the delete one as a wall of red.
+  .session-action {
     opacity: 0;
     transition: opacity 0.12s ease;
   }
 
-  tr:hover .session-delete,
-  .session-delete:focus-visible {
+  tr:hover .session-action,
+  .session-action:focus-visible {
+    opacity: 1;
+  }
+}
+
+// Touch devices have no hover, so the actions would never appear.
+@media (hover: none) {
+  .session-table .session-action {
     opacity: 1;
   }
 }

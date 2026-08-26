@@ -2,17 +2,19 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/components/AuthProvider';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { TagTotals } from '@/components/activity/TagTotals';
 import { DailyTrend } from '@/components/activity/DailyTrend';
 import { DayStrip } from '@/components/activity/DayStrip';
 import { AddBlockForm } from '@/components/activity/AddBlockForm';
+import { EditBlockDialog } from '@/components/activity/EditBlockDialog';
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { deleteBlock, fetchBlocksInRange, fetchTags } from '@/lib/blocks';
 import { addDays, rangeFor, summarise } from '@/lib/summary';
 import { useClock } from '@/lib/useClock';
 import { blockDuration, formatClock, formatTotal } from '@/lib/time';
 import { slotColor, type Tag, type TimeBlockWithTag } from '@/lib/types';
-import { BarChartIcon, TrashIcon } from '@/components/icons';
+import { BarChartIcon, PencilIcon, TrashIcon } from '@/components/icons';
 
 type RangeMode = 'day' | 'week' | 'month';
 
@@ -34,6 +36,10 @@ export default function ActivityPage() {
   const [tags, setTags] = useState<Tag[]>([]);
   const [adding, setAdding] = useState(false);
   const [showTable, setShowTable] = useState(false);
+  /** The block open in the edit dialog, and the one queued for deletion. */
+  const [editing, setEditing] = useState<TimeBlockWithTag | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<TimeBlockWithTag | null>(null);
+  const [deleting, setDeleting] = useState(false);
   /** Bumped to force a refetch after adding or deleting a block. */
   const [nonce, setNonce] = useState(0);
 
@@ -88,9 +94,16 @@ export default function ActivityPage() {
     [blocks, range]
   );
 
-  async function remove(id: number) {
-    await deleteBlock(createClient(), id);
-    reload();
+  async function confirmRemove() {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      await deleteBlock(createClient(), pendingDelete.id);
+      setPendingDelete(null);
+      reload();
+    } finally {
+      setDeleting(false);
+    }
   }
 
   const shift = (direction: -1 | 1) => setOffsetDays((o) => o + direction * STEP_DAYS[mode]);
@@ -195,7 +208,7 @@ export default function ActivityPage() {
 
             {mode === 'day' ? (
               <div className="card-surface chart-card">
-                <DayStrip day={range.from} blocks={blocks} />
+                <DayStrip day={range.from} blocks={blocks} onSelect={setEditing} />
               </div>
             ) : (
               <div className="card-surface chart-card">
@@ -257,11 +270,20 @@ export default function ActivityPage() {
                         <td className="text-muted small session-note" title={b.note ?? undefined}>
                           {b.note ?? ''}
                         </td>
-                        <td className="text-end">
+                        <td className="text-end text-nowrap">
                           <button
-                            className="btn btn-ghost btn-sm text-danger p-1 session-delete"
-                            onClick={() => remove(b.id)}
+                            className="btn btn-ghost btn-sm p-1 session-action"
+                            onClick={() => setEditing(b)}
+                            aria-label={`Edit ${b.tag?.name ?? 'unlabelled'} session`}
+                            title="Edit"
+                          >
+                            <PencilIcon size={13} />
+                          </button>
+                          <button
+                            className="btn btn-ghost btn-sm text-danger p-1 session-action"
+                            onClick={() => setPendingDelete(b)}
                             aria-label={`Delete ${b.tag?.name ?? 'unlabelled'} session`}
+                            title="Delete"
                           >
                             <TrashIcon size={13} />
                           </button>
@@ -274,6 +296,36 @@ export default function ActivityPage() {
             </div>
           )}
         </>
+      )}
+
+      {editing && (
+        <EditBlockDialog
+          block={editing}
+          tags={tags}
+          onSaved={() => {
+            setEditing(null);
+            reload();
+          }}
+          onCancel={() => setEditing(null)}
+        />
+      )}
+
+      {pendingDelete && (
+        <ConfirmDialog
+          title="Delete this block?"
+          body={
+            <>
+              {pendingDelete.tag?.name ?? 'Unlabelled'} ·{' '}
+              {formatClock(pendingDelete.started_at)}–{formatClock(pendingDelete.ended_at!)} ·{' '}
+              {formatTotal(blockDuration(pendingDelete))}. This removes the time from your
+              totals for good.
+            </>
+          }
+          confirmLabel="Delete block"
+          busy={deleting}
+          onConfirm={confirmRemove}
+          onCancel={() => setPendingDelete(null)}
+        />
       )}
     </div>
   );

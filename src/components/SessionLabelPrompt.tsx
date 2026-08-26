@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { createTag, fetchTags } from '@/lib/blocks';
+import { nextSlot } from '@/lib/edits';
 import { blockDuration, formatClock, formatTotal } from '@/lib/time';
-import { TAG_SLOTS, slotColor, type Tag, type TimeBlock } from '@/lib/types';
+import { slotColor, type Tag, type TimeBlock } from '@/lib/types';
 import { CheckSmallIcon, TagIcon, TrashIcon } from '@/components/icons';
 
 /**
@@ -68,8 +69,7 @@ export function SessionLabelPrompt({
     try {
       // Next slot in fixed order, wrapping once all eight are used — hues are
       // never generated, so a new tag can't land on top of an existing one.
-      const slot = TAG_SLOTS[tags.length % TAG_SLOTS.length];
-      const tag = await createTag(supabase, block.user_id, name, slot);
+      const tag = await createTag(supabase, block.user_id, name, nextSlot(tags.length));
       setTags((prev) => [...prev, tag].sort((a, b) => a.name.localeCompare(b.name)));
       setSelected(tag.id);
       setNewTagName('');

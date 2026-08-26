@@ -82,14 +82,17 @@ src/
     page.tsx             -> /dashboard
     not-found.tsx        -> /dashboard  (was the '**' route)
     dashboard/           the stopwatch
-    activity/            charts, day strip, backfill
+    activity/            charts, day strip, backfill, block editing
+    tags/                rename, recolour, archive, delete
     login/ register/
   components/
     AuthProvider.tsx     Supabase auth: user, login, register, logout
     ThemeProvider.tsx    dark/light via <html data-theme>, no FOUC
     TimerProvider.tsx    the session timer; above the router so it survives navigation
+    ConfirmDialog.tsx    the gate in front of anything with no undo
     Navbar.tsx  icons.tsx
   lib/supabase/          browser / server / proxy clients
+  lib/edits.ts           block + tag validation, mirroring the check constraints
   proxy.ts               refreshes the session, keeps signed-in users off /login
   styles/                global SCSS (carried over from Angular unchanged)
 ```
@@ -139,8 +142,13 @@ Two tables, both RLS-protected per user — see [docs/DOMAIN.md](docs/DOMAIN.md)
 
 | Table | Holds |
 |---|---|
-| `tags` | Your categories (Reading, Studying, …). Five are seeded on sign-up. |
+| `tags` | Your categories (Reading, Studying, …). Five are seeded on sign-up; managed at `/tags`. |
 | `time_blocks` | The ledger. One row per labelled block; `ended_at is null` is the running session. |
+
+Tags are **archived** rather than deleted by default. Archiving hides a tag from
+every picker while the blocks that reference it keep its name and colour;
+deleting sets `tag_id` to null on all of them, which is not reversible — so the
+delete confirmation counts the blocks first (`tag_usage()`).
 
 `tags.color` holds a palette **slot** (`blue`, `orange`, …), not a hex — each
 theme resolves its own step via `--series-*` in `globals.scss`, because a colour
