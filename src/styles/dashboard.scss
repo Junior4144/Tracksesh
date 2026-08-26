@@ -1,0 +1,561 @@
+.dashboard {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.dashboard-header {
+  h2 {
+    font-size: 1.5rem;
+    color: var(--text-primary);
+  }
+}
+
+.letter-spacing {
+  letter-spacing: 0.12em;
+}
+
+// ── State label ─────────────────────────────────────────────────────────────
+.state-label {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+
+  &.ring-idle    { color: var(--text-muted); }
+  &.ring-running { color: var(--accent); }
+  &.ring-paused  { color: var(--warning); }
+  &.ring-done    { color: var(--success); }
+}
+
+// ── Timer SVG ring ──────────────────────────────────────────────────────────
+.timer-ring-wrapper {
+  display: inline-block;
+}
+
+.timer-svg {
+  display: block;
+  transition: filter 0.4s ease;
+
+  .ring-track {
+    stroke: var(--ring-track);
+  }
+
+  .ring-progress {
+    transition: stroke-dashoffset 1s linear, stroke 0.4s ease;
+
+    &.ring-idle    { stroke: var(--ring-track); }
+    &.ring-running { stroke: var(--accent); }
+    &.ring-paused  { stroke: var(--warning); }
+    &.ring-done    { stroke: var(--success); }
+  }
+}
+
+.timer-ring-wrapper.pulse .timer-svg {
+  filter: drop-shadow(0 0 12px rgba(var(--accent-rgb), 0.4));
+}
+
+// ── Center text ─────────────────────────────────────────────────────────────
+.timer-center {
+  width: 200px;
+  user-select: none;
+}
+
+.timer-display {
+  font-size: clamp(3rem, 8vw, 4.5rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  line-height: 1;
+  letter-spacing: -2px;
+
+  &.done {
+    color: var(--success);
+  }
+}
+
+.timer-sub {
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  color: var(--text-muted);
+}
+
+// ── Controls ─────────────────────────────────────────────────────────────────
+.btn-outline-accent {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: transparent;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(var(--accent-rgb), 0.12);
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+  }
+}
+
+// ── Done banner ──────────────────────────────────────────────────────────────
+.done-banner {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--success);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  svg { fill: var(--success); }
+}
+
+// ── Chips ────────────────────────────────────────────────────────────────────
+.session-chips {
+  margin-top: 0.5rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+}
+
+// Editable duration chip
+.chip-editable {
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+
+  .edit-icon { opacity: 0.5; transition: opacity 0.2s; }
+
+  &:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(var(--accent-rgb), 0.07);
+    .edit-icon { opacity: 1; }
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+
+// ── Duration editor ───────────────────────────────────────────────────────────
+.duration-row {
+  margin-top: 0.25rem;
+}
+
+.duration-editor {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 0.6rem;
+  padding: 0.5rem 0.85rem;
+}
+
+.duration-input {
+  width: 72px;
+  text-align: center;
+  background: var(--input-bg);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+
+  &:focus {
+    background: var(--input-bg);
+    border-color: var(--accent);
+    color: var(--text-primary);
+    box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.15);
+  }
+}
+
+// ── Login nudge ───────────────────────────────────────────────────────────────
+.login-nudge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  background: rgba(var(--accent-rgb), 0.1);
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
+  color: var(--accent);
+  animation: nudge-fade 1.4s ease forwards;
+}
+
+@keyframes nudge-fade {
+  0%   { opacity: 0; transform: translateY(4px); }
+  15%  { opacity: 1; transform: translateY(0); }
+  75%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+// ── Auth link in header ───────────────────────────────────────────────────────
+.link-accent {
+  color: var(--accent);
+  text-decoration: none;
+  &:hover { text-decoration: underline; }
+}
+
+// ── Stop button ───────────────────────────────────────────────────────────────
+// Deliberately not accent-coloured: stopping ends the session and opens the
+// labelling prompt, so it shouldn't read as the same weight as Start/Resume.
+.btn-stop {
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-primary);
+  border-radius: 999px;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+
+  &:hover:not(:disabled) {
+    border-color: var(--warning);
+    color: var(--warning);
+    background: rgba(245, 166, 35, 0.08);
+  }
+}
+
+.timer-error {
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  color: var(--warning);
+  background: rgba(245, 166, 35, 0.1);
+  border: 1px solid rgba(245, 166, 35, 0.3);
+}
+
+// ── Recent sessions ───────────────────────────────────────────────────────────
+.recent-blocks {
+  width: 100%;
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+  // Sits under the timer controls inside the centre column.
+  margin-top: 0.5rem;
+}
+
+.recent-more {
+  display: inline-block;
+  margin-top: 0.75rem;
+  font-size: 0.78rem;
+  text-decoration: none;
+
+  &:hover { text-decoration: underline; }
+}
+
+.recent-title {
+  letter-spacing: 0.08em;
+}
+
+.recent-row {
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.9rem;
+
+  &:last-child { border-bottom: none; }
+}
+
+.recent-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.recent-total {
+  min-width: 3.5rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.recent-time {
+  font-variant-numeric: tabular-nums;
+}
+
+// ── "What did you do?" prompt ─────────────────────────────────────────────────
+.label-prompt-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(3px);
+  animation: prompt-fade 0.15s ease;
+}
+
+.label-prompt {
+  width: 100%;
+  max-width: 27rem;
+  padding: 1.75rem;
+  border-radius: 1rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+  animation: prompt-rise 0.18s ease;
+}
+
+@keyframes prompt-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes prompt-rise {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+// ── Tag chips ─────────────────────────────────────────────────────────────────
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  transition: border-color 0.15s ease, background 0.15s ease;
+
+  &:hover { border-color: var(--tag-color, var(--accent)); }
+
+  &.selected {
+    border-color: var(--tag-color, var(--accent));
+    background: color-mix(in srgb, var(--tag-color, var(--accent)) 14%, transparent);
+    font-weight: 600;
+  }
+}
+
+.tag-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tag-color, var(--accent));
+}
+
+.tag-chip-new {
+  border-style: dashed;
+  color: var(--text-muted);
+}
+
+.tag-create-input {
+  width: 9rem;
+}
+
+// ── Info panels ───────────────────────────────────────────────────────────────
+// Reusable closeable explainer. See components/panels/InfoPanel.tsx.
+.info-panel {
+  width: 100%;
+  padding: 1.15rem 1.25rem 1.25rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 0.85rem;
+  animation: panel-in 0.2s ease;
+}
+
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.info-panel-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+}
+
+.info-panel-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.12);
+}
+
+.info-panel-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0.2rem 0 0;
+  color: var(--text-primary);
+}
+
+.info-panel-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0.15rem 0 0;
+}
+
+.info-panel-close {
+  flex: 0 0 auto;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 0.4rem;
+  padding: 0.25rem;
+  line-height: 0;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+
+  &:hover {
+    color: var(--text-primary);
+    background: rgba(var(--bs-body-color-rgb), 0.08);
+  }
+}
+
+.info-panel-body {
+  margin-top: 0.9rem;
+}
+
+// ── Numbered steps ────────────────────────────────────────────────────────────
+.panel-steps {
+  list-style: none;
+  margin: 0 0 0.9rem;
+  padding: 0;
+
+  li {
+    display: flex;
+    gap: 0.6rem;
+    padding: 0.4rem 0;
+    font-size: 0.84rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+  }
+}
+
+.panel-step-number {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  margin-top: 0.12rem;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.12);
+}
+
+.panel-step-title {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.panel-note {
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+  margin-bottom: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--border-color);
+}
+
+// ── Collapsed state ───────────────────────────────────────────────────────────
+// Closing hides the panel but never the way back to it.
+.panel-restore {
+  // flex + fit-content, not inline-flex: margin auto only centres a
+  // block-level box, and this sits alone in a full-width grid column.
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  gap: 0.4rem;
+  margin-inline: auto;
+  padding: 0.3rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px dashed var(--border-color);
+  transition: color 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+}
+
+// ── Three-column dashboard ────────────────────────────────────────────────────
+// Wide screens had two large empty gutters either side of the timer, so the
+// explainer moves into the left one and the timer stays optically centred.
+//
+// Source order is centre, left — the sides are positioned by grid-column, so
+// the narrow single-column stack still leads with the timer rather than making
+// a phone user scroll past the explainer to reach Start.
+.dashboard-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2rem 1.5rem;
+  padding: 0 1rem 3rem;
+  align-content: start;
+  justify-items: center;
+}
+
+.dash-center {
+  width: 100%;
+  max-width: 34rem;
+}
+
+.dash-side {
+  width: 100%;
+  max-width: 34rem;
+}
+
+// 62em (992px), not 75em. The ring is 280px and the gutters need ~210px each,
+// so three columns fit comfortably from here — and a laptop window with a
+// docked editor or panel is very often under 1200px, which was silently
+// dropping the explainer to the bottom of the page.
+@media (min-width: 62em) {
+  .dashboard-layout {
+    // Symmetric minmax: both gutters resize by the same amount, so the centre
+    // column stays centred at every width instead of drifting.
+    grid-template-columns:
+      minmax(12rem, 19rem)
+      minmax(20rem, 1fr)
+      minmax(12rem, 19rem);
+    align-items: start;
+    max-width: 78rem;
+    margin: 0 auto;
+    padding-inline: 1.5rem;
+  }
+
+  // Three independent columns, all on one row. Each sizes itself, so however
+  // tall the left panel grows it cannot move anything in the centre column.
+  //
+  // grid-row is explicit and required. The centre column comes first in source
+  // order (so the narrow stack leads with the timer), which leaves the
+  // auto-placement cursor past column 1 — and sparse packing only moves
+  // forward, so a bare `grid-column: 1` lands the panel on a new row underneath
+  // instead of beside the timer.
+  .dash-side-left  { grid-column: 1; grid-row: 1; }
+  .dash-center     { grid-column: 2; grid-row: 1; }
+  // Reserved, currently empty: column 3 keeps the timer optically centred, and
+  // is the slot a second <InfoPanel> drops into without touching this grid.
+  .dash-side-right { grid-column: 3; grid-row: 1; }
+
+  // Nudged down so the panel sits level with the ring rather than the state
+  // label, which is a much lighter piece of type.
+  .dash-side {
+    position: sticky;
+    top: 5.5rem;
+    padding-top: 2.5rem;
+  }
+}
