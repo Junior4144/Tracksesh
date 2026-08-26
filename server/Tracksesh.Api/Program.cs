@@ -147,17 +147,9 @@ if (!app.Environment.IsDevelopment())
 {
     var behindProxy = app.Configuration.GetValue("Security:TrustProxyHeaders", false);
 
-    if (behindProxy)
-    {
-        app.UseForwardedHeaders(new ForwardedHeadersOptions
-        {
-            ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedFor,
-            // Cleared deliberately: the proxy's address isn't known here, and
-            // the setting above is the operator asserting there is one.
-            KnownIPNetworks = { },
-            KnownProxies = { },
-        });
-    }
+    // See TransportSecurity.ForAnyProxy — the "trust any proxy" part is easy to
+    // write in a way that compiles, reads correctly, and does nothing.
+    if (behindProxy) app.UseForwardedHeaders(TransportSecurity.ForAnyProxy());
 
     // Only emitted on responses the framework considers secure, which is why
     // the switch above is not cosmetic: behind a TLS-terminating proxy without
