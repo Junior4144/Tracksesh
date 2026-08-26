@@ -16,7 +16,8 @@
     "e2e": "playwright test dashboard.spec.ts",
     "e2e:shots": "playwright test screens.spec.ts",
     "test:api": "dotnet run --project server/Tracksesh.Api.Tests -p:BaseOutputPath=obj/test-bin/",
-    "test:csp": "node scripts/csp-check.mjs"
+    "test:csp": "node scripts/csp-check.mjs",
+    "setup:demo": "node scripts/ensure-demo-user.mjs"
   },
   "prettier": {
     "printWidth": 100,

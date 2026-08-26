@@ -132,6 +132,7 @@ the demo button will fail.
 | `npm test` | Vitest suite (pure logic, jsdom) |
 | `npm run e2e` | Playwright layout checks in a real browser |
 | `npm run e2e:shots` | Screenshots → `test-results/screens/` |
+| `npm run setup:demo` | Creates the demo account if missing (idempotent) |
 | `npm run test:api` | RLS isolation tests against a real Postgres |
 | `npm run test:csp` | Drives a production build, fails on any CSP violation |
 | `npm run lint` | ESLint |
@@ -160,8 +161,10 @@ then `npm run api`), because the Content-Security-Policy is set by the API and
 
 ## Deploying
 
-One process. `npm run build` writes the SPA into the API's `wwwroot`, and
-`dotnet publish` picks it up from there:
+One image, one process, one origin. `npm run build` writes the SPA into the
+API's `wwwroot` and `dotnet publish` packages it, so the deployed app serves its
+own front end — no CORS, and the security headers apply to the HTML as well as
+the API. Locally:
 
 ```bash
 npm run build
@@ -171,6 +174,167 @@ dotnet publish server/Tracksesh.Api -c Release
 The API serves the static files and falls back to `index.html` so client-side
 routes survive a cold load, while an unmatched `/api/*` path still returns a 404
 rather than a page of HTML.
+
+### Pipelines
+
+| Workflow | Trigger | Does |
+|---|---|---|
+| `ci.yml` | every PR and push to main | Every check, against a real Supabase stack, plus a throwaway image build |
+| `deploy.yml` | manual, type `deploy` | Builds the image, pushes it to Lightsail, waits for health, smoke-tests |
+| `migrate.yml` | manual, type the project ref | `supabase db push` + `config push`; dry run by default |
+
+Deploy and migrate are separate and both manual on purpose. A schema change
+riding along with an unrelated deploy fails together with it, and rolling back
+the code does not roll back the migration. Keeping them apart forces the
+ordering to be decided rather than discovered: additive migrations before the
+code that uses them, destructive ones only after the code that stopped needing
+them is live.
+
+CI runs the RLS isolation tests and the CSP check on **pull requests**, not just
+on main. That is the point of them — a branch that quietly removes the thing
+keeping one user's ledger away from another's should not be able to go green.
+
+### One-time setup
+
+**1. The Lightsail container service.** Create it once — the pipeline deploys to
+it, it does not create it:
+
+```bash
+aws lightsail create-container-service   --service-name tracksesh --power micro --scale 1
+```
+
+Lightsail terminates TLS at its own load balancer and gives the service an
+HTTPS URL, which is why the deploy sets `Security__TrustProxyHeaders=true`.
+Without it every request reaches the app as plain HTTP and **HSTS is never
+sent** — see [Transport security](#transport-security).
+
+**2. An IAM role GitHub can assume.** The deploy uses OIDC rather than a stored
+access key, so there is no long-lived credential in the repository to leak or
+remember to rotate. Trust policy:
+
+```json
+{
+  "Effect": "Allow",
+  "Principal": { "Federated": "arn:aws:iam::<account-id>:oidc-provider/token.actions.githubusercontent.com" },
+  "Action": "sts:AssumeRoleWithWebIdentity",
+  "Condition": {
+    "StringEquals": { "token.actions.githubusercontent.com:aud": "sts.amazonaws.com" },
+    "StringLike": { "token.actions.githubusercontent.com:sub": "repo:<owner>/<repo>:*" }
+  }
+}
+```
+
+Keep the `sub` condition. Without it any repository on GitHub can assume the
+role.
+
+The permissions policy:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Action": [
+      "lightsail:CreateContainerServiceRegistryLogin",
+      "lightsail:RegisterContainerImage",
+      "lightsail:CreateContainerServiceDeployment",
+      "lightsail:GetContainerServices",
+      "lightsail:GetContainerImages"
+    ],
+    "Resource": "*"
+  }]
+}
+```
+
+Note there is no `lightsail:PushContainerImage` — despite the CLI command being
+called that. `aws lightsail push-container-image` is a client-side helper that
+calls `CreateContainerServiceRegistryLogin` to get registry credentials, pushes
+with Docker, then `RegisterContainerImage`. Granting the command's name instead
+of the two APIs it uses fails at deploy time with a message that names neither.
+
+`Resource: "*"` because a Lightsail container service ARN is keyed by a
+generated UUID rather than the service name, so a scoped ARN cannot be written
+before the service exists — and `CreateContainerServiceRegistryLogin` is
+account-level regardless. The action list is the constraint that matters here.
+
+**3. How the API reaches Supabase.** Check this before the first deploy. On
+newer projects the direct connection (`db.<ref>.supabase.co:5432`) is
+**IPv6-only** unless you have the IPv4 add-on, and a Lightsail container will
+not reach it. Use the Supavisor pooler in **session mode** — it behaves like an
+ordinary connection, which is what `Db.cs` assumes. Transaction mode also works,
+because `RunAsync` does everything inside one explicit transaction so
+`SET LOCAL` stays scoped, but prepared statements have to stay off.
+
+Whichever role you connect as must be able to `SET ROLE authenticated`.
+
+Two traps in the snippet Supabase's dashboard hands you for .NET:
+
+- It names the connection string **`DefaultConnection`**. This app reads
+  `ConnectionStrings:Postgres`, and a mismatch fails at startup with
+  "ConnectionStrings:Postgres is not configured" rather than anything about the
+  database.
+- It shows the value inside `appsettings.json`. Don't. That file is committed;
+  the connection string is the one credential here that grants direct database
+  access. It belongs in the `POSTGRES_CONNECTION` repository secret, which the
+  deploy passes to the container as `ConnectionStrings__Postgres` at runtime.
+
+The pooler username is `postgres.<project-ref>`, not `postgres` — the pooler
+routes on it.
+
+**On `Trust Server Certificate=true`**, which that snippet also suggests: it
+encrypts the connection but stops verifying who is on the other end, so it
+protects against passive eavesdropping and not against an active
+man-in-the-middle. Supabase signs the pooler certificate with its own CA rather
+than a public one, which is why the default trust store rejects it. The stronger
+option is to ship Supabase's CA certificate in the image and use
+`SSL Mode=VerifyFull;Root Certificate=/app/supabase-ca.crt`. Start with the
+former to get a deploy working, but it is a real if modest weakening and worth
+closing.
+
+**4. Supabase URL configuration.** Set `site_url` in `supabase/config.toml` to
+the deployed origin and add it to `additional_redirect_urls`, then let
+`migrate.yml` push it. Emailed links are built from `site_url`, so until this is
+right, password resets point at localhost.
+
+### Secrets and variables
+
+Repository **variables** — not secret, and two of them end up in the JavaScript
+bundle by design:
+
+| Name | Example |
+|---|---|
+| `AWS_REGION` | `us-east-1` |
+| `LIGHTSAIL_SERVICE_NAME` | `tracksesh` |
+| `VITE_SUPABASE_URL` | `https://<ref>.supabase.co` |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_…` |
+| `SUPABASE_PROJECT_REF` | `<ref>` |
+
+Repository **secrets**:
+
+| Name | Notes |
+|---|---|
+| `AWS_DEPLOY_ROLE_ARN` | The role from step 2 |
+| `POSTGRES_CONNECTION` | Npgsql connection string. Runtime only — never a build arg |
+| `SUPABASE_ACCESS_TOKEN` | For `migrate.yml` |
+| `SUPABASE_DB_PASSWORD` | For `migrate.yml` |
+
+The split is not cosmetic. `VITE_*` are read at **build** time and inlined into
+the bundle, so they are permanently in the image and must be public values — a
+`sb_secret_…` passed as a build arg is readable by anyone who pulls it.
+Everything the API reads is loaded at **startup** from the container's
+environment, so it stays out of every layer.
+
+Docker's linter warns `SecretsUsedInArgOrEnv` on `VITE_SUPABASE_PUBLISHABLE_KEY`
+because the name ends in `KEY`. It is a publishable key; the warning is a false
+positive and the Dockerfile says so.
+
+### First deploy, in order
+
+1. `migrate.yml` with **dry run** ticked — see what would run.
+2. `migrate.yml` for real, applying migrations and pushing config.
+3. `deploy.yml`.
+4. Create the demo user on the hosted project if you want the login page's demo
+   button to work.
 
 ## Layout
 

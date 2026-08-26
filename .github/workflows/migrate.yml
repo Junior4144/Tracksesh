@@ -1,0 +1,92 @@
+name: Migrate database
+
+# Deliberately separate from Deploy, and deliberately manual.
+#
+# A schema change riding along with an unrelated deploy is how a bad afternoon
+# starts: the two fail together, and rolling back the code does not roll back
+# the migration. Keeping them apart also forces the ordering question to be
+# answered on purpose — additive changes first, then the code that uses them;
+# destructive changes only after the code that stopped needing them is live.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type the project ref to confirm you mean this database'
+        required: true
+      dry_run:
+        description: 'List pending migrations without applying them'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: supabase db push
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+
+    steps:
+      - name: Check the confirmation
+        if: inputs.confirm != vars.SUPABASE_PROJECT_REF
+        run: |
+          echo "::error::Confirmation did not match SUPABASE_PROJECT_REF."
+          exit 1
+
+      - uses: actions/checkout@v5
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link the project
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: supabase link --project-ref "${{ vars.SUPABASE_PROJECT_REF }}"
+
+      # Default. Shows what would run against production before anything does.
+      - name: List pending migrations
+        if: inputs.dry_run
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          supabase migration list --linked
+          echo "::notice::Dry run. Re-run with dry_run unchecked to apply."
+
+      - name: Apply
+        if: ${{ !inputs.dry_run }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: supabase db push --linked
+
+      # config.toml holds more than local ports: site_url, the redirect allow
+      # list, the email templates — and the `[api] schemas` line that keeps
+      # `public` off the Data API. Pushing it is what makes those version
+      # controlled rather than dashboard folklore.
+      - name: Push project config
+        if: ${{ !inputs.dry_run }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: supabase config push
+
+      # Proves the door stayed shut. If `public` ever creeps back into
+      # `[api] schemas`, the API stops being the only route to the tables and
+      # this is the cheapest place to notice.
+      - name: Verify the Data API does not expose the tables
+        if: ${{ !inputs.dry_run }}
+        run: |
+          CODE=$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "apikey: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}" \
+            "${{ vars.VITE_SUPABASE_URL }}/rest/v1/tags?select=id&limit=1")
+
+          if [ "$CODE" = "200" ]; then
+            echo "::error::PostgREST is serving public.tags - the public schema is exposed again."
+            exit 1
+          fi
+          echo "Data API returned $CODE for public.tags, as intended."

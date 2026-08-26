@@ -1,0 +1,38 @@
+# Anything here would be copied into the build context and then thrown away —
+# or worse, baked into a layer.
+
+.git
+.github
+node_modules
+dist
+
+# Build output. The image builds these itself; copying a host build in would
+# make the image depend on whatever was last run on someone's laptop.
+server/**/bin
+server/**/obj
+server/Tracksesh.Api/wwwroot
+
+# Real credentials. `.env` is gitignored but not context-ignored by default,
+# and a COPY . . would put it in a layer that survives even if a later step
+# deletes it.
+.env
+.env.local
+.env*.local
+
+# Local-only tooling and artefacts
+.agents
+.claude
+.vscode
+.next
+supabase/.branches
+supabase/.temp
+test-results
+playwright-report
+playwright/.auth
+coverage
+*.tsbuildinfo
+
+# Docs — they change often and would bust the cache for no reason.
+docs
+*.md
+!README.md

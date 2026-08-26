@@ -1,0 +1,155 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A second push to the same branch makes the first run's answer irrelevant.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '24'
+  DOTNET_VERSION: '10.0.x'
+  DOTNET_NOLOGO: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+
+jobs:
+  check:
+    name: Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - run: npm ci
+
+      # ── The database ────────────────────────────────────────────────────
+      #
+      # A plain `postgres:` service container is not enough, and substituting
+      # one would quietly gut the most important tests here. What
+      # Tracksesh.Api.Tests exercises is the RLS policies, `auth.uid()` and the
+      # `authenticated` role — none of which exist in stock Postgres. They come
+      # from the Supabase stack, which also applies supabase/migrations for us.
+      #
+      # Only db + auth are needed: the browser talks to GoTrue, the API talks to
+      # Postgres, and PostgREST is deliberately not exposed at all. Skipping the
+      # rest saves a couple of minutes of image pulls per run.
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start Supabase (db + auth)
+        run: >
+          supabase start
+          -x realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor,mailpit
+
+      - name: Read local stack config
+        run: |
+          supabase status -o env | grep -E '^[A-Z_]+=' > "$RUNNER_TEMP/sb.env"
+          . "$RUNNER_TEMP/sb.env"
+          {
+            echo "VITE_SUPABASE_URL=$API_URL"
+            echo "VITE_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY"
+            echo "SUPABASE_DB_URL=$DB_URL"
+          } >> "$GITHUB_ENV"
+
+      # The login page advertises this account and both the CSP check and the
+      # Playwright suite sign in as it. A fresh database has no users.
+      - run: npm run setup:demo
+
+      # ── Static checks ───────────────────────────────────────────────────
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: dotnet build server --configuration Release
+
+      # ── The security guards ─────────────────────────────────────────────
+      #
+      # These are the reason this job bothers with a real database. If they are
+      # ever moved to a "main only" job, a pull request can go green while
+      # removing the thing that keeps one user's ledger away from another's.
+      - name: RLS isolation tests
+        run: npm run test:api
+
+      # ── The built artefact ──────────────────────────────────────────────
+      - name: Build the SPA
+        run: npm run build
+
+      - name: Start the API over the built SPA
+        run: |
+          # Development, so it reads appsettings.Development.json and finds the
+          # local stack without a pile of env vars. The production config path
+          # is exercised by the deploy workflow's image build instead.
+          ASPNETCORE_ENVIRONMENT=Development \
+          ASPNETCORE_URLS=http://localhost:5251 \
+          nohup dotnet run --project server/Tracksesh.Api --no-launch-profile \
+            -p:BaseOutputPath=obj/ci-bin/ > "$RUNNER_TEMP/api.log" 2>&1 &
+
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:5251/api/health && break
+            sleep 2
+          done
+          curl -sf http://localhost:5251/api/health || { cat "$RUNNER_TEMP/api.log"; exit 1; }
+
+      # `vite dev` never applies the Content-Security-Policy — the API sets it,
+      # on the production build. Without this step a broken policy ships.
+      - name: CSP check
+        run: npm run test:csp
+
+      - run: npx playwright install --with-deps chromium
+
+      - name: Playwright layout checks
+        run: npm run e2e
+
+      - name: API log
+        if: failure()
+        run: cat "$RUNNER_TEMP/api.log" || true
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+  image:
+    name: Container image builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Built but not pushed. A Dockerfile that only gets exercised at deploy
+      # time is a Dockerfile that breaks at deploy time — and the VITE_* values
+      # here are placeholders precisely because this artefact is thrown away.
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          build-args: |
+            VITE_SUPABASE_URL=http://127.0.0.1:54321
+            VITE_SUPABASE_PUBLISHABLE_KEY=ci-placeholder
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
