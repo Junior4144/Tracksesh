@@ -29,11 +29,32 @@ jobs:
     environment: production
 
     steps:
+      # A real step rather than an `if:` guard, so it can say *why* it refused.
+      # The two failures look identical from the outside and have completely
+      # different fixes: a typo, or a variable that was never set.
+      #
+      # The expected value is echoed deliberately. A Supabase project ref is not
+      # a secret — it is the subdomain of the project's public URL and is inlined
+      # into the JavaScript bundle. Masking it here would buy nothing and cost
+      # the only clue.
       - name: Check the confirmation
-        if: inputs.confirm != vars.SUPABASE_PROJECT_REF
+        env:
+          EXPECTED: ${{ vars.SUPABASE_PROJECT_REF }}
+          GOT: ${{ inputs.confirm }}
         run: |
-          echo "::error::Confirmation did not match SUPABASE_PROJECT_REF."
-          exit 1
+          if [ -z "$EXPECTED" ]; then
+            echo "::error::The SUPABASE_PROJECT_REF repository variable is not set, so there is nothing to confirm against."
+            echo "Set it under Settings -> Secrets and variables -> Actions -> Variables tab."
+            echo "Note it is a *variable*, not a secret — this workflow reads vars.SUPABASE_PROJECT_REF."
+            exit 1
+          fi
+
+          if [ "$GOT" != "$EXPECTED" ]; then
+            echo "::error::Confirmation '$GOT' does not match SUPABASE_PROJECT_REF ('$EXPECTED')."
+            exit 1
+          fi
+
+          echo "Confirmed: targeting project $EXPECTED"
 
       - uses: actions/checkout@v5
 
