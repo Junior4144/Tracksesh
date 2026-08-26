@@ -1,26 +1,16 @@
-'use client';
-
 import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from 'react';
 
 export type Theme = 'dark' | 'light';
 
 const STORAGE_KEY = 'tracksesh_theme';
 
-/**
- * Runs before first paint so the correct theme is on <html> when the page
- * renders. Without this the server always emits `dark` and light-mode users
- * get a flash of the wrong theme on every navigation.
+/*
+ * The script that writes <html data-theme> before first paint lives in
+ * index.html, inline and blocking. It used to be this string, injected into the
+ * server-rendered document; with no server render, a module import is already
+ * too late — it runs after the first frame, which is the frame that would be
+ * wrong. Keep the storage key below in sync with the copy there.
  */
-export const themeBootScript = `
-(function () {
-  try {
-    var t = localStorage.getItem('${STORAGE_KEY}') || 'dark';
-    document.documentElement.setAttribute('data-theme', t);
-  } catch (e) {
-    document.documentElement.setAttribute('data-theme', 'dark');
-  }
-})();
-`;
 
 // ── External store ───────────────────────────────────────────────────────────
 // <html data-theme> is the source of truth: the boot script above has already

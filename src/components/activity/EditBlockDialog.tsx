@@ -1,8 +1,5 @@
-'use client';
-
 import { useEffect, useState } from 'react';
 import { updateBlock } from '@/lib/blocks';
-import { createClient } from '@/lib/supabase/client';
 import { combine, dateValue, timeValue, validateBlockRange } from '@/lib/edits';
 import { formatTotal } from '@/lib/time';
 import { slotColor, type Tag, type TimeBlockWithTag } from '@/lib/types';
@@ -84,7 +81,7 @@ export function EditBlockDialog({
     setError(null);
     setSaving(true);
     try {
-      await updateBlock(createClient(), block.id, { tagId, note, startedAt, endedAt });
+      await updateBlock(block.id, { tagId, note, startedAt, endedAt });
       onSaved();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save that change.');

@@ -1,13 +1,8 @@
-'use client';
-
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router';
 import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
-import {
-  NOT_CONFIGURED_MESSAGE,
-  createClient,
-  isSupabaseConfigured,
-} from '@/lib/supabase/client';
+import { NOT_CONFIGURED_MESSAGE, getSupabase, isSupabaseConfigured } from '@/lib/supabase';
+import { deleteAccount as deleteAccountOnServer } from '@/lib/blocks';
 
 export interface User {
   id: string;
@@ -40,7 +35,7 @@ interface AuthContextValue {
   updatePassword: (password: string, currentPassword?: string) => Promise<AuthResult>;
   /**
    * Deletes the account and everything in it, then signs out. Takes the
-   * password so the check can't be skipped by calling this directly.
+   * password so the server can refuse if it's wrong.
    */
   deleteAccount: (password: string) => Promise<AuthResult>;
 }
@@ -52,16 +47,20 @@ function toUser(u: SupabaseUser | null | undefined): User | null {
   return { id: u.id, email: u.email };
 }
 
-export function AuthProvider({
-  initialUser = null,
-  children,
-}: {
-  initialUser?: User | null;
-  children: React.ReactNode;
-}) {
-  const router = useRouter();
-  const supabase = useMemo(() => (isSupabaseConfigured() ? createClient() : null), []);
-  const [user, setUser] = useState<User | null>(initialUser);
+/**
+ * Who is signed in.
+ *
+ * Sign-in, sign-out and token refresh are Supabase Auth's job and always were.
+ * What changed with the move to the .NET API is where the session lives: there
+ * are no cookies and no server render to seed this from, so `ready` starts
+ * false on every load and the route guards hold the page until the initial
+ * lookup resolves. Rendering signed-out while that is in flight would bounce a
+ * signed-in user to /login on every refresh.
+ */
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const navigate = useNavigate();
+  const supabase = useMemo(() => (isSupabaseConfigured() ? getSupabase() : null), []);
+  const [user, setUser] = useState<User | null>(null);
   // Nothing to wait for when Supabase isn't wired up.
   const [ready, setReady] = useState(() => !isSupabaseConfigured());
 
@@ -76,8 +75,8 @@ export function AuthProvider({
       setReady(true);
     });
 
-    // Fires on sign-in, sign-out and token refresh — including refreshes
-    // driven by middleware in another tab.
+    // Fires on sign-in, sign-out and token refresh — including refreshes driven
+    // by another tab, since both share the same storage key.
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session: Session | null) => {
@@ -95,11 +94,9 @@ export function AuthProvider({
       if (!supabase) return { error: NOT_CONFIGURED_MESSAGE };
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) return { error: error.message || 'Invalid credentials. Please try again.' };
-      // Re-run server components so middleware/layout see the new cookies.
-      router.refresh();
       return { error: null };
     },
-    [supabase, router]
+    [supabase]
   );
 
   const register = useCallback(
@@ -110,18 +107,16 @@ export function AuthProvider({
       // With "Confirm email" on (the Supabase default) sign-up returns no
       // session — the user has to click the emailed link before signing in.
       if (!data.session) return { error: null, needsConfirmation: true };
-      router.refresh();
       return { error: null };
     },
-    [supabase, router]
+    [supabase]
   );
 
   const logout = useCallback(async () => {
     await supabase?.auth.signOut();
     setUser(null);
-    router.push('/login');
-    router.refresh();
-  }, [supabase, router]);
+    navigate('/login', { replace: true });
+  }, [supabase, navigate]);
 
   /**
    * Supabase deliberately doesn't say whether an address has an account, so
@@ -148,7 +143,7 @@ export function AuthProvider({
 
   /**
    * `currentPassword` is checked here, by signing in with it, rather than being
-   * left to the server.
+   * left to Supabase.
    *
    * Supabase does accept a `current_password` on `updateUser`, and it is passed
    * along below — but it is not reliably enforced. With
@@ -161,6 +156,10 @@ export function AuthProvider({
    * "confirm your current password" field on /account would be decoration, and
    * a session left open on a shared machine would be enough to lock its owner
    * out of their own account.
+   *
+   * Unlike account deletion, this one stays in the browser: changing a password
+   * goes to Supabase Auth directly, so there is no request through the API for
+   * a server-side check to attach to.
    */
   const updatePassword = useCallback(
     async (password: string, currentPassword?: string): Promise<AuthResult> => {
@@ -182,47 +181,41 @@ export function AuthProvider({
       );
 
       if (error) return { error: error.message || 'Could not update your password.' };
-      router.refresh();
       return { error: null };
     },
-    [supabase, router, user]
+    [supabase, user]
   );
 
   /**
-   * Deletion happens in the database (see the account_deletion migration) —
-   * removing an auth user needs privileges the browser will never hold, and
-   * this project has no secret key by design.
+   * Deletion happens on the server, which verifies the password against
+   * Supabase Auth before erasing anything and then runs the SECURITY DEFINER
+   * function that removes the auth user.
    *
-   * The password is re-checked first, by signing in again. A borrowed or stolen
-   * session is enough to read someone's ledger; it should not be enough to
-   * destroy it. Re-signing-in mints a fresh session for the same user, which is
-   * harmless, and it's the only way to verify a password from the browser
-   * without a secret key.
+   * That verification used to happen here, by re-signing-in, because a
+   * publishable-key-only browser had no other way to check a password. It moved
+   * because a check the client performs is a check the client can skip, and a
+   * borrowed session should not be enough to destroy someone's ledger.
    *
-   * Signing out afterwards matters: deleting a user does not invalidate access
-   * tokens already issued, so without it the browser would keep a valid token
-   * for an account that no longer exists until it expired.
+   * Signing out afterwards still matters: deleting a user does not invalidate
+   * access tokens already issued, so without it the browser would keep a valid
+   * token for an account that no longer exists until it expired.
    */
   const deleteAccount = useCallback(
     async (password: string): Promise<AuthResult> => {
       if (!supabase) return { error: NOT_CONFIGURED_MESSAGE };
 
-      const email = user?.email;
-      if (!email) return { error: 'You need to be signed in to do that.' };
-
-      const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
-      if (authError) return { error: 'That password is not correct.' };
-
-      const { error } = await supabase.rpc('delete_account');
-      if (error) return { error: error.message || 'Could not delete your account.' };
+      try {
+        await deleteAccountOnServer(password);
+      } catch (e) {
+        return { error: e instanceof Error ? e.message : 'Could not delete your account.' };
+      }
 
       await supabase.auth.signOut();
       setUser(null);
-      router.push('/login');
-      router.refresh();
+      navigate('/login', { replace: true });
       return { error: null };
     },
-    [supabase, router, user]
+    [supabase, navigate]
   );
 
   const displayName = useMemo(() => {

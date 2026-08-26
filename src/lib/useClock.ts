@@ -1,5 +1,3 @@
-'use client';
-
 import { useCallback, useSyncExternalStore } from 'react';
 
 const TICK_MS = 1000;

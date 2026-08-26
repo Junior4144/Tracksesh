@@ -1,5 +1,3 @@
-'use client';
-
 import { formatTotal } from '@/lib/time';
 import { slotColor } from '@/lib/types';
 import type { TagTotal } from '@/lib/summary';

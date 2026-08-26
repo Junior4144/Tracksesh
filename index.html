@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <!--
+      TS.png, not favicon.ico — this is what the app used before the migration
+      (`icons: { icon: '/TS.png' }` in the old layout.tsx). favicon.ico stays in
+      public/ because browsers and crawlers request that path unprompted, but
+      the declared icon wins wherever one is honoured.
+    -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/TS.png" />
+    <link rel="apple-touch-icon" href="/TS.png" />
+
+    <!--
+      This shell is the only HTML a crawler or a link scraper ever sees, because
+      everything below it is rendered by React in the browser.
+
+      That is a deliberate trade and it costs nothing here: every real route is
+      behind a sign-in and must not be indexed, and `/` only redirects to the
+      dashboard. There is no marketing copy to render server-side. If a real
+      landing page is ever added, prerender that one route at build time —
+      hydration does not help, since it presupposes the JavaScript a scraper
+      never runs.
+    -->
+    <title>Tracksesh</title>
+    <meta name="description" content="Track where your time actually goes." />
+    <meta property="og:title" content="Tracksesh" />
+    <meta property="og:description" content="Track where your time actually goes." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/TS.png" />
+    <meta name="twitter:card" content="summary" />
+
+    <!--
+      Before first paint, so a light-mode user never sees a flash of dark.
+      Classic and non-deferred on purpose: it must block parsing and run before
+      the first frame. External rather than inline so the CSP can refuse
+      inline script outright — see public/theme-boot.js.
+    -->
+    <script src="/theme-boot.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

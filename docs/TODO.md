@@ -39,18 +39,18 @@ until that's right the flow works locally and nowhere else.
 
 ## P0 · No container image, no CI
 
-**Evidence.** [`next.config.ts`](../next.config.ts) sets `output: 'standalone'`
-with a comment saying "this is what the Dockerfile will copy", and
-[README.md](../README.md) repeats it — but there is no `Dockerfile`, no
-`.github/`, and no platform config of any kind. The commit named "adds
-deployment settings" predates the Next.js migration and only touched Angular
-files. Nothing runs `lint` / `typecheck` / `test` / `e2e` except a human, on
-one machine.
+**Evidence.** There is no `Dockerfile`, no `.github/`, and no platform config of
+any kind. The commit named "adds deployment settings" predates two migrations
+and only touched Angular files. Nothing runs `lint` / `typecheck` / `test` /
+`e2e` / `dotnet build` except a human, on one machine.
 
-**The work.** A multi-stage Dockerfile copying `.next/standalone`, and a
-workflow running the four checks on push. Both `NEXT_PUBLIC_*` vars are inlined
-at **build** time, so the image build and CI both need them — not just runtime.
-That is the part most likely to be got wrong.
+**The work.** A multi-stage Dockerfile — a Node stage running `npm run build`,
+a .NET SDK stage running `dotnet publish`, and a runtime stage carrying only the
+published output — plus a workflow running the checks on push. The `VITE_*` vars
+are inlined at **build** time, so the image build and CI both need them, not just
+runtime. That is still the part most likely to be got wrong. The API's own
+configuration is the opposite: read at startup, so it belongs in the runtime
+environment and must *not* be baked into the image.
 
 **Done when:** `docker build` produces a running image, and a pushed branch
 shows four green checks.
@@ -115,10 +115,12 @@ reload.
 
 ## P2 · No error boundary
 
-There is no `app/error.tsx` or `global-error.tsx`, so an unhandled render error
-anywhere gives the stock Next.js error page. There *is* a
-[`not-found.tsx`](../src/app/not-found.tsx), so the 404 path is covered and this
-is the remaining hole.
+Nothing catches a render error, so an unhandled one anywhere unmounts the app
+and leaves a blank page — worse than the framework error page this used to get,
+because it is silent. The 404 path is covered: the catch-all route in
+[`App.tsx`](../src/App.tsx) redirects to `/dashboard`.
+
+**The work.** A React error boundary around the route table.
 
 **Done when:** a thrown error in a page renders an in-app screen with a way back
 to `/dashboard`.
@@ -166,11 +168,15 @@ the add form should do the same.
 
 ## Smaller things
 
-- **`.env.local` parser disagreement.** [`scripts/seed-demo.mjs`](../scripts/seed-demo.mjs)
+- **`.env` parser disagreement.** [`scripts/seed-demo.mjs`](../scripts/seed-demo.mjs)
   builds its env with `Object.fromEntries`, so a duplicated key takes the
-  **last** value; Next's dotenv keeps the **first**. Today only one
-  `NEXT_PUBLIC_SUPABASE_URL` is uncommented so they agree, but uncommenting both
-  would silently point the seed script and the app at different databases.
+  **last** value; Vite's dotenv keeps the **first**. Today only one
+  `VITE_SUPABASE_URL` is uncommented so they agree, but uncommenting both would
+  silently point the seed script and the app at different databases.
+- **`seed-demo.mjs` connects to Postgres directly** — the Data API no longer
+  exposes `public`, and the API has no endpoint for the `source: 'timer'` rows
+  with pause time that it creates. It still writes under RLS, impersonating the
+  target user exactly as `Db.cs` does, so the constraints and policies apply.
 - **`20260826002820_noop_placeholder.sql`** is an intentionally empty migration
   — an unnamed `supabase migration new` scaffold that reached both databases
   before anyone noticed. Kept because deleting it would leave both with a

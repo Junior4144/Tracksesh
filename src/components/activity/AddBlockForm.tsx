@@ -1,8 +1,5 @@
-'use client';
-
 import { useState } from 'react';
 import { createManualBlock } from '@/lib/blocks';
-import { createClient } from '@/lib/supabase/client';
 import { combine, dateValue, validateBlockRange } from '@/lib/edits';
 import { formatTotal } from '@/lib/time';
 import { slotColor, type Tag } from '@/lib/types';
@@ -14,13 +11,11 @@ import { CheckSmallIcon } from '@/components/icons';
  * Produces exactly the same object as the stopwatch, only with source='manual'.
  */
 export function AddBlockForm({
-  userId,
   tags,
   day,
   onAdded,
   onCancel,
 }: {
-  userId: string;
   tags: Tag[];
   day: Date;
   onAdded: () => void;
@@ -53,7 +48,7 @@ export function AddBlockForm({
     setError(null);
     setSaving(true);
     try {
-      await createManualBlock(createClient(), userId, { startedAt, endedAt, tagId, note });
+      await createManualBlock({ startedAt, endedAt, tagId, note });
       onAdded();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save that block.');

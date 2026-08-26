@@ -1,26 +1,27 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { api, query } from './api';
 import type { Tag, TagUsage, TimeBlock, TimeBlockWithTag } from './types';
 
 /**
- * Data access for the ledger. Every call runs as the signed-in user, so RLS —
- * not any filter written here — is what keeps one user's blocks away from
- * another's. The `user_id` filters below exist to help the planner, not to
- * enforce anything.
+ * Data access for the ledger.
+ *
+ * Every call goes to the .NET API, which runs it as the signed-in user — so row
+ * level security, not any filter written here or there, is still what keeps one
+ * user's blocks away from another's. The functions kept their names and return
+ * types through the move off Supabase; they only lost the client they used to
+ * take as a first argument, and the user ids the server now knows without being
+ * told.
  */
-
-const BLOCK_COLUMNS = 'id, user_id, tag_id, note, started_at, ended_at, paused_at, paused_seconds, source, created_at, updated_at';
-const BLOCK_WITH_TAG = `${BLOCK_COLUMNS}, tag:tags (id, name, color)`;
 
 /**
  * The database's current time, for correcting local clock drift.
  *
- * The HTTP `Date` header would do, but it isn't on the CORS safelist and this
- * project doesn't expose it, so the browser can't read it.
+ * Still a request rather than a response header: the API could expose `Date`
+ * now that it sets its own CORS headers, but the value that matters is
+ * Postgres's clock — the one that stamped every block — not the web server's.
  */
-export async function fetchServerNow(supabase: SupabaseClient): Promise<string> {
-  const { data, error } = await supabase.rpc('server_now');
-  if (error) throw error;
-  return data as string;
+export async function fetchServerNow(): Promise<string> {
+  const { now } = await api.get<{ now: string }>('/time');
+  return now;
 }
 
 /**
@@ -31,29 +32,13 @@ export async function fetchServerNow(supabase: SupabaseClient): Promise<string> 
  * blocks that already reference it keep their name and colour. Only the tag
  * management view asks for the whole set.
  */
-export async function fetchTags(
-  supabase: SupabaseClient,
-  { includeArchived = false }: { includeArchived?: boolean } = {}
-): Promise<Tag[]> {
-  let query = supabase.from('tags').select('*');
-  if (!includeArchived) query = query.eq('is_archived', false);
-
-  const { data, error } = await query.order('name');
-
-  if (error) throw error;
-  return data ?? [];
+export function fetchTags({ includeArchived = false } = {}): Promise<Tag[]> {
+  return api.get<Tag[]>(`/tags${query({ includeArchived })}`);
 }
 
 /** The live session, if there is one. At most one exists per user. */
-export async function fetchRunningBlock(supabase: SupabaseClient): Promise<TimeBlock | null> {
-  const { data, error } = await supabase
-    .from('time_blocks')
-    .select(BLOCK_COLUMNS)
-    .is('ended_at', null)
-    .maybeSingle();
-
-  if (error) throw error;
-  return data;
+export function fetchRunningBlock(): Promise<TimeBlock | null> {
+  return api.get<TimeBlock | null>('/session');
 }
 
 /**
@@ -62,93 +47,54 @@ export async function fetchRunningBlock(supabase: SupabaseClient): Promise<TimeB
  * A null return means there was nothing to act on.
  */
 
-export async function startSession(supabase: SupabaseClient): Promise<TimeBlock> {
-  const { data, error } = await supabase.rpc('start_session');
-  if (error) throw error;
-  if (!data) throw new Error('Could not start a session.');
-  return data;
+export function startSession(): Promise<TimeBlock> {
+  return api.post<TimeBlock>('/session/start');
 }
 
-export async function pauseSession(supabase: SupabaseClient): Promise<TimeBlock | null> {
-  const { data, error } = await supabase.rpc('pause_session');
-  if (error) throw error;
-  return data;
+export function pauseSession(): Promise<TimeBlock | null> {
+  return api.post<TimeBlock | null>('/session/pause');
 }
 
-export async function resumeSession(supabase: SupabaseClient): Promise<TimeBlock | null> {
-  const { data, error } = await supabase.rpc('resume_session');
-  if (error) throw error;
-  return data;
+export function resumeSession(): Promise<TimeBlock | null> {
+  return api.post<TimeBlock | null>('/session/resume');
 }
 
-export async function stopSession(supabase: SupabaseClient): Promise<TimeBlock | null> {
-  const { data, error } = await supabase.rpc('stop_session');
-  if (error) throw error;
-  return data;
+export function stopSession(): Promise<TimeBlock | null> {
+  return api.post<TimeBlock | null>('/session/stop');
 }
 
 /** Answers "what did you do in this block?" after the stopwatch stops. */
-export async function labelBlock(
-  supabase: SupabaseClient,
-  id: number,
-  tagId: number | null,
-  note: string
-): Promise<void> {
-  const { error } = await supabase
-    .from('time_blocks')
-    .update({ tag_id: tagId, note: note.trim() || null })
-    .eq('id', id);
-
-  if (error) throw error;
+export async function labelBlock(id: number, tagId: number | null, note: string): Promise<void> {
+  await api.patch<void>(`/blocks/${id}`, { tag_id: tagId, note: note.trim() || null });
 }
 
-export async function deleteBlock(supabase: SupabaseClient, id: number): Promise<void> {
-  const { error } = await supabase.from('time_blocks').delete().eq('id', id);
-  if (error) throw error;
+export async function deleteBlock(id: number): Promise<void> {
+  await api.delete<void>(`/blocks/${id}`);
 }
 
 /** Backfill: a block for time that happened without the stopwatch running. */
-export async function createManualBlock(
-  supabase: SupabaseClient,
-  userId: string,
-  input: { startedAt: Date; endedAt: Date; tagId: number | null; note?: string }
-): Promise<TimeBlock> {
-  const { data, error } = await supabase
-    .from('time_blocks')
-    .insert({
-      user_id: userId,
-      started_at: input.startedAt.toISOString(),
-      ended_at: input.endedAt.toISOString(),
-      tag_id: input.tagId,
-      note: input.note?.trim() || null,
-      source: 'manual',
-    })
-    .select(BLOCK_COLUMNS)
-    .single();
-
-  if (error) throw error;
-  return data;
+export function createManualBlock(input: {
+  startedAt: Date;
+  endedAt: Date;
+  tagId: number | null;
+  note?: string;
+}): Promise<TimeBlock> {
+  return api.post<TimeBlock>('/blocks', {
+    started_at: input.startedAt.toISOString(),
+    ended_at: input.endedAt.toISOString(),
+    tag_id: input.tagId,
+    note: input.note?.trim() || null,
+  });
 }
 
 /**
  * Finished blocks overlapping [from, to) — what the activity view draws.
  * Overlap, not containment, so a session spanning midnight shows up on both days.
  */
-export async function fetchBlocksInRange(
-  supabase: SupabaseClient,
-  from: Date,
-  to: Date
-): Promise<TimeBlockWithTag[]> {
-  const { data, error } = await supabase
-    .from('time_blocks')
-    .select(BLOCK_WITH_TAG)
-    .not('ended_at', 'is', null)
-    .lt('started_at', to.toISOString())
-    .gt('ended_at', from.toISOString())
-    .order('started_at', { ascending: false });
-
-  if (error) throw error;
-  return (data ?? []) as unknown as TimeBlockWithTag[];
+export function fetchBlocksInRange(from: Date, to: Date): Promise<TimeBlockWithTag[]> {
+  return api.get<TimeBlockWithTag[]>(
+    `/blocks${query({ from: from.toISOString(), to: to.toISOString() })}`
+  );
 }
 
 /**
@@ -158,29 +104,12 @@ export async function fetchBlocksInRange(
  * worse than no export at all. A personal ledger is a few thousand rows at
  * most, and this runs once, by hand.
  */
-export async function fetchAllBlocks(supabase: SupabaseClient): Promise<TimeBlockWithTag[]> {
-  const { data, error } = await supabase
-    .from('time_blocks')
-    .select(BLOCK_WITH_TAG)
-    .order('started_at', { ascending: true });
-
-  if (error) throw error;
-  return (data ?? []) as unknown as TimeBlockWithTag[];
+export function fetchAllBlocks(): Promise<TimeBlockWithTag[]> {
+  return api.get<TimeBlockWithTag[]>('/blocks/all');
 }
 
-export async function fetchRecentBlocks(
-  supabase: SupabaseClient,
-  limit = 8
-): Promise<TimeBlockWithTag[]> {
-  const { data, error } = await supabase
-    .from('time_blocks')
-    .select(BLOCK_WITH_TAG)
-    .not('ended_at', 'is', null)
-    .order('started_at', { ascending: false })
-    .limit(limit);
-
-  if (error) throw error;
-  return (data ?? []) as unknown as TimeBlockWithTag[];
+export function fetchRecentBlocks(limit = 8): Promise<TimeBlockWithTag[]> {
+  return api.get<TimeBlockWithTag[]>(`/blocks/recent${query({ limit })}`);
 }
 
 /**
@@ -190,62 +119,35 @@ export async function fetchRecentBlocks(
  * `time_blocks_pause_fits` reject a range that ends before it starts or that is
  * shorter than the pauses already recorded inside it. `validateBlockRange`
  * checks the same things first so the user gets a sentence instead of a
- * constraint name.
+ * constraint name, and the API translates the constraint into one anyway for
+ * the cases only the database can catch.
  */
 export async function updateBlock(
-  supabase: SupabaseClient,
   id: number,
   patch: { tagId: number | null; note: string; startedAt: Date; endedAt: Date }
 ): Promise<void> {
-  const { error } = await supabase
-    .from('time_blocks')
-    .update({
-      tag_id: patch.tagId,
-      note: patch.note.trim() || null,
-      started_at: patch.startedAt.toISOString(),
-      ended_at: patch.endedAt.toISOString(),
-    })
-    .eq('id', id);
-
-  if (error) throw error;
+  await api.patch<void>(`/blocks/${id}`, {
+    tag_id: patch.tagId,
+    note: patch.note.trim() || null,
+    started_at: patch.startedAt.toISOString(),
+    ended_at: patch.endedAt.toISOString(),
+  });
 }
 
-export async function createTag(
-  supabase: SupabaseClient,
-  userId: string,
-  name: string,
-  color: string
-): Promise<Tag> {
-  const { data, error } = await supabase
-    .from('tags')
-    .insert({ user_id: userId, name: name.trim(), color })
-    .select('*')
-    .single();
-
-  if (error) throw error;
-  return data;
+export function createTag(name: string, color: string): Promise<Tag> {
+  return api.post<Tag>('/tags', { name: name.trim(), color });
 }
 
 /** Rename, recolour, or archive/restore. Only the given fields are touched. */
-export async function updateTag(
-  supabase: SupabaseClient,
+export function updateTag(
   id: number,
   patch: { name?: string; color?: string; is_archived?: boolean }
 ): Promise<Tag> {
-  const fields: Record<string, unknown> = {};
-  if (patch.name !== undefined) fields.name = patch.name.trim();
-  if (patch.color !== undefined) fields.color = patch.color;
-  if (patch.is_archived !== undefined) fields.is_archived = patch.is_archived;
-
-  const { data, error } = await supabase
-    .from('tags')
-    .update(fields)
-    .eq('id', id)
-    .select('*')
-    .single();
-
-  if (error) throw error;
-  return data;
+  return api.patch<Tag>(`/tags/${id}`, {
+    name: patch.name?.trim(),
+    color: patch.color,
+    is_archived: patch.is_archived,
+  });
 }
 
 /**
@@ -254,15 +156,24 @@ export async function updateTag(
  * is not reversible, which is why the UI counts the affected blocks first and
  * offers archiving instead.
  */
-export async function deleteTag(supabase: SupabaseClient, id: number): Promise<void> {
-  const { error } = await supabase.from('tags').delete().eq('id', id);
-  if (error) throw error;
+export async function deleteTag(id: number): Promise<void> {
+  await api.delete<void>(`/tags/${id}`);
 }
 
 /** Blocks and worked seconds per tag, aggregated in the database. */
-export async function fetchTagUsage(supabase: SupabaseClient): Promise<Map<number, TagUsage>> {
-  const { data, error } = await supabase.rpc('tag_usage');
-  if (error) throw error;
+export async function fetchTagUsage(): Promise<Map<number, TagUsage>> {
+  const rows = await api.get<TagUsage[]>('/tags/usage');
+  return new Map(rows.map((row) => [row.tag_id, row]));
+}
 
-  return new Map(((data ?? []) as TagUsage[]).map((row) => [row.tag_id, row]));
+/**
+ * Erase the account and everything in it.
+ *
+ * The password goes to the server rather than being checked here: a check the
+ * browser performs is a check the browser can skip, and this endpoint is
+ * reachable with nothing but a valid token. The API verifies it against
+ * Supabase Auth before deleting anything.
+ */
+export async function deleteAccount(password: string): Promise<void> {
+  await api.delete<void>('/account', { password });
 }

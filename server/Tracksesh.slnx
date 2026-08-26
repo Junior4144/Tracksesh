@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Tracksesh.Api.Tests/Tracksesh.Api.Tests.csproj" />
+  <Project Path="Tracksesh.Api/Tracksesh.Api.csproj" />
+</Solution>

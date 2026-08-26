@@ -1,5 +1,3 @@
-'use client';
-
 import type { ReactNode } from 'react';
 import { useDismissed } from '@/lib/useDismissed';
 import { XIcon } from '@/components/icons';

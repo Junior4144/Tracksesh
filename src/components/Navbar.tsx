@@ -1,8 +1,6 @@
-'use client';
-
 import { useState } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { Link } from 'react-router';
+import { useLocation } from 'react-router';
 import { useAuth } from '@/components/AuthProvider';
 import { useTheme } from '@/components/ThemeProvider';
 import {
@@ -18,7 +16,7 @@ import {
 export function Navbar() {
   const { isLoggedIn, displayName, logout } = useAuth();
   const { isDark, toggle } = useTheme();
-  const pathname = usePathname();
+  const { pathname } = useLocation();
 
   // Replaces Bootstrap's data-bs-toggle="collapse", so we don't need to ship
   // bootstrap.bundle.js just for the mobile menu.
@@ -31,7 +29,7 @@ export function Navbar() {
       <div className="container-sm">
         <Link
           className="navbar-brand d-flex align-items-center gap-2 fw-bold"
-          href="/dashboard"
+          to="/dashboard"
           onClick={() => setOpen(false)}
         >
           <BrandMark size={28} />
@@ -56,7 +54,7 @@ export function Navbar() {
                 <li className="nav-item">
                   <Link
                     className={`nav-link${isActive('/dashboard') ? ' active' : ''}`}
-                    href="/dashboard"
+                    to="/dashboard"
                     onClick={() => setOpen(false)}
                   >
                     <ClockIcon className="me-1" size={15} />
@@ -67,7 +65,7 @@ export function Navbar() {
                 <li className="nav-item">
                   <Link
                     className={`nav-link${isActive('/activity') ? ' active' : ''}`}
-                    href="/activity"
+                    to="/activity"
                     onClick={() => setOpen(false)}
                   >
                     <BarChartIcon className="me-1" size={14} />
@@ -78,7 +76,7 @@ export function Navbar() {
                 <li className="nav-item">
                   <Link
                     className={`nav-link${isActive('/tags') ? ' active' : ''}`}
-                    href="/tags"
+                    to="/tags"
                     onClick={() => setOpen(false)}
                   >
                     <TagIcon className="me-1" size={14} />
@@ -89,7 +87,7 @@ export function Navbar() {
                 <li className="nav-item">
                   <Link
                     className={`nav-link${isActive('/account') ? ' active' : ''}`}
-                    href="/account"
+                    to="/account"
                     onClick={() => setOpen(false)}
                   >
                     <PersonIcon className="me-1" size={14} />
@@ -114,7 +112,7 @@ export function Navbar() {
                 <li className="nav-item">
                   <Link
                     className={`nav-link${isActive('/login') ? ' active' : ''}`}
-                    href="/login"
+                    to="/login"
                     onClick={() => setOpen(false)}
                   >
                     Sign in
@@ -123,7 +121,7 @@ export function Navbar() {
                 <li className="nav-item">
                   <Link
                     className="btn btn-accent btn-sm ms-1"
-                    href="/register"
+                    to="/register"
                     onClick={() => setOpen(false)}
                   >
                     Get started

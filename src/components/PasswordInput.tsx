@@ -1,5 +1,3 @@
-'use client';
-
 import { forwardRef, useState } from 'react';
 import { EyeIcon, EyeSlashIcon } from '@/components/icons';
 

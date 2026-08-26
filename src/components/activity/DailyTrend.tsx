@@ -1,5 +1,3 @@
-'use client';
-
 import { useState } from 'react';
 import { formatTotal } from '@/lib/time';
 import { slotColor } from '@/lib/types';

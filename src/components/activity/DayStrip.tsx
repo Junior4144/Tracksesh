@@ -1,5 +1,3 @@
-'use client';
-
 import { useState } from 'react';
 import { blockDuration, formatClock, formatTotal } from '@/lib/time';
 import { slotColor, type TimeBlockWithTag } from '@/lib/types';
