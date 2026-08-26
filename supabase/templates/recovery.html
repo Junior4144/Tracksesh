@@ -1,0 +1,26 @@
+<!--
+  Password reset email.
+
+  The link deliberately does NOT use {{ .ConfirmationURL }}. That default lands
+  the user on the site with a PKCE `?code=`, which only works in the same
+  browser that started the flow — open the email on your phone and it fails.
+  {{ .TokenHash }} is verified server-side by /auth/confirm instead, so the
+  device that opens the link doesn't have to be the one that asked.
+
+  `type=recovery` tells that route which kind of token this is; `next` is where
+  the user lands once the session exists.
+-->
+<h2>Reset your Tracksesh password</h2>
+
+<p>
+  Someone asked to reset the password for this address. Follow the link below to
+  choose a new one — it expires in an hour.
+</p>
+
+<p>
+  <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/account/update-password">
+    Choose a new password
+  </a>
+</p>
+
+<p>If you didn't ask for this, you can ignore this email — nothing has changed.</p>

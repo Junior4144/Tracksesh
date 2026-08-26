@@ -1,15 +1,4 @@
-'use client';
-
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
-import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import {
   fetchRunningBlock,
   fetchServerNow,
@@ -20,6 +9,7 @@ import {
   startSession,
   stopSession,
 } from '@/lib/blocks';
+import { useAuth } from '@/components/AuthProvider';
 import { clockOffset, elapsedSeconds, formatDuration, ringProgress } from '@/lib/time';
 import { useClock } from '@/lib/useClock';
 import type { TimeBlock } from '@/lib/types';
@@ -63,14 +53,46 @@ const TimerContext = createContext<TimerContextValue | null>(null);
  *     below only forces a re-render; it never accumulates.
  */
 export function TimerProvider({ children }: { children: React.ReactNode }) {
-  const supabase = useMemo(() => (isSupabaseConfigured() ? createClient() : null), []);
+  /*
+   * The stopwatch follows the session.
+   *
+   * Under Supabase this provider held its own client and the auth cookie went
+   * along with every request, so it could fetch the moment it mounted. The API
+   * wants a bearer token, which does not exist until AuthProvider has resolved
+   * who is signed in — so the initial lookup waits for `authReady` and re-runs
+   * whenever the user changes. Fetching earlier would 401 on every reload and
+   * leave the timer stuck at idle with a session still running in the database.
+   */
+  const { user, ready: authReady } = useAuth();
 
   const [block, setBlock] = useState<TimeBlock | null>(null);
   const [pending, setPending] = useState<TimeBlock | null>(null);
-  // Nothing to wait for when Supabase isn't wired up.
-  const [ready, setReady] = useState(() => !isSupabaseConfigured());
+  const [fetched, setFetched] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  /*
+   * Whose stopwatch is currently cached, so a change of user throws it away.
+   *
+   * Adjusting state during render rather than in an effect: React supports this
+   * exact pattern for "reset when an input changes", and it re-renders before
+   * committing, so nothing ever paints one account's session under another's
+   * name. An effect would let that frame through — and on sign-out that frame
+   * shows a stranger's running timer.
+   */
+  const userId = user?.id ?? null;
+  const [cachedFor, setCachedFor] = useState<string | null>(userId);
+
+  if (cachedFor !== userId) {
+    setCachedFor(userId);
+    setBlock(null);
+    setPending(null);
+    setFetched(false);
+  }
+
+  // Derived, not stored: signed out there is nothing to look up, so the
+  // stopwatch is ready as soon as auth is.
+  const ready = authReady && (!user || fetched);
 
   /**
    * Server clock minus this machine's clock, in ms.
@@ -93,12 +115,12 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
   // Pick up an already-running session (another tab, an earlier visit, a crash),
   // and measure how far this machine's clock sits from the database's.
   useEffect(() => {
-    if (!supabase) return;
+    if (!authReady || !user) return;
 
     let active = true;
     const sentAt = Date.now();
 
-    Promise.all([fetchRunningBlock(supabase), fetchServerNow(supabase)])
+    Promise.all([fetchRunningBlock(), fetchServerNow()])
       .then(([running, serverIso]) => {
         if (!active) return;
         setOffsetMs(clockOffset(serverIso, sentAt, Date.now()));
@@ -108,13 +130,13 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         // Signed out or offline: stay idle rather than blocking the page.
       })
       .finally(() => {
-        if (active) setReady(true);
+        if (active) setFetched(true);
       });
 
     return () => {
       active = false;
     };
-  }, [supabase]);
+  }, [authReady, user]);
 
   const isRunning = !!block && !block.paused_at;
 
@@ -125,7 +147,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
   /** Serialises transitions so a double-click can't fire two RPCs. */
   const run = useCallback(
     async (fn: () => Promise<void>) => {
-      if (!supabase) {
+      if (!user) {
         setError('Sign in to track sessions.');
         return;
       }
@@ -143,7 +165,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         if (mounted.current) setBusy(false);
       }
     },
-    [supabase, busy]
+    [user, busy]
   );
 
   /**
@@ -159,50 +181,50 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     () =>
       run(async () => {
         const sentAt = Date.now();
-        const started = await startSession(supabase!);
+        const started = await startSession();
         if (!mounted.current) return;
         resync(started, sentAt);
         setBlock(started);
       }),
-    [run, supabase, resync]
+    [run, resync]
   );
 
   const pause = useCallback(
     () =>
       run(async () => {
         const sentAt = Date.now();
-        const paused = await pauseSession(supabase!);
+        const paused = await pauseSession();
         if (!mounted.current || !paused) return;
         resync(paused, sentAt);
         setBlock(paused);
       }),
-    [run, supabase, resync]
+    [run, resync]
   );
 
   const resume = useCallback(
     () =>
       run(async () => {
         const sentAt = Date.now();
-        const resumed = await resumeSession(supabase!);
+        const resumed = await resumeSession();
         if (!mounted.current || !resumed) return;
         resync(resumed, sentAt);
         setBlock(resumed);
       }),
-    [run, supabase, resync]
+    [run, resync]
   );
 
   const stop = useCallback(
     () =>
       run(async () => {
         const sentAt = Date.now();
-        const stopped = await stopSession(supabase!);
+        const stopped = await stopSession();
         if (!mounted.current) return;
         resync(stopped, sentAt);
         setBlock(null);
         // Held for labelling — "what did you do in this time?"
         if (stopped) setPending(stopped);
       }),
-    [run, supabase, resync]
+    [run, resync]
   );
 
   const label = useCallback(
@@ -210,10 +232,10 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
       run(async () => {
         const target = pending;
         if (!target) return;
-        await labelBlock(supabase!, target.id, tagId, note);
+        await labelBlock(target.id, tagId, note);
         if (mounted.current) setPending(null);
       }),
-    [run, supabase, pending]
+    [run, pending]
   );
 
   /** Discard a mis-start rather than leaving a stray minute in the ledger. */
@@ -222,10 +244,10 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
       run(async () => {
         const target = pending;
         if (!target) return;
-        await deleteBlock(supabase!, target.id);
+        await deleteBlock(target.id);
         if (mounted.current) setPending(null);
       }),
-    [run, supabase, pending]
+    [run, pending]
   );
 
   // Keeps the block, unlabelled. Losing the time is worse than an untidy ledger.

@@ -1,0 +1,167 @@
+name: Deploy
+
+# Manual, and only from main. A deploy that fires on every merge is a deploy
+# that happens while nobody is looking; this one you press.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "deploy" to confirm'
+        required: true
+        default: ''
+
+permissions:
+  # OIDC: GitHub mints a short-lived token AWS trusts, so there is no long-lived
+  # access key sitting in this repository's secrets to leak or rotate. See
+  # "Deploying" in README.md for the IAM role and trust policy this needs.
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  SERVICE_NAME: ${{ vars.LIGHTSAIL_SERVICE_NAME }}
+
+jobs:
+  deploy:
+    name: Build and deploy to Lightsail
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+
+    steps:
+      - name: Check the confirmation
+        if: inputs.confirm != 'deploy'
+        run: |
+          echo "::error::Type 'deploy' to confirm. Got: '${{ inputs.confirm }}'"
+          exit 1
+
+      - uses: actions/checkout@v5
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # ── Build ───────────────────────────────────────────────────────────
+      #
+      # VITE_* are build args because they are inlined into the JavaScript
+      # bundle and cannot be supplied later. They are safe to bake in: the
+      # project URL and the *publishable* key are public by design. Everything
+      # the API reads is set on the container below, at runtime.
+      - name: Build the image
+        run: |
+          docker build \
+            --build-arg VITE_SUPABASE_URL='${{ vars.VITE_SUPABASE_URL }}' \
+            --build-arg VITE_SUPABASE_PUBLISHABLE_KEY='${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}' \
+            -t tracksesh:${{ github.sha }} .
+
+      # ── Push ────────────────────────────────────────────────────────────
+      #
+      # Lightsail rewrites the tag to `:<service>.<label>.<n>` and only that
+      # name is deployable, so it has to be read back out rather than assumed.
+      - name: Push to Lightsail
+        id: push
+        run: |
+          aws lightsail push-container-image \
+            --region "$AWS_REGION" \
+            --service-name "$SERVICE_NAME" \
+            --label app \
+            --image "tracksesh:${{ github.sha }}" | tee "$RUNNER_TEMP/push.log"
+
+          IMAGE=$(grep -oE '"?:[a-zA-Z0-9._-]+\.app\.[0-9]+"?' "$RUNNER_TEMP/push.log" | tail -1 | tr -d '"')
+          if [ -z "$IMAGE" ]; then
+            echo "::error::Could not determine the pushed image name."
+            cat "$RUNNER_TEMP/push.log"
+            exit 1
+          fi
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+          echo "Pushed $IMAGE"
+
+      # ── Deploy ──────────────────────────────────────────────────────────
+      #
+      # The environment is assembled with jq rather than a heredoc so the
+      # secrets are passed as values, never interpolated into a shell string
+      # where a quote in a password would break the JSON — or worse, be echoed.
+      #
+      # TrustProxyHeaders is true because Lightsail terminates TLS at its own
+      # load balancer: without it every request looks like plain HTTP to the
+      # app, and the HSTS header is never sent at all.
+      - name: Deploy
+        env:
+          POSTGRES_CONNECTION: ${{ secrets.POSTGRES_CONNECTION }}
+          SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          CONTAINERS=$(jq -n \
+            --arg image '${{ steps.push.outputs.image }}' \
+            --arg pg "$POSTGRES_CONNECTION" \
+            --arg url "$SUPABASE_URL" \
+            --arg key "$SUPABASE_PUBLISHABLE_KEY" \
+            '{
+              app: {
+                image: $image,
+                ports: { "8080": "HTTP" },
+                environment: {
+                  ASPNETCORE_ENVIRONMENT: "Production",
+                  ASPNETCORE_URLS: "http://+:8080",
+                  "ConnectionStrings__Postgres": $pg,
+                  "Supabase__Url": $url,
+                  "Supabase__PublishableKey": $key,
+                  "Security__TrustProxyHeaders": "true",
+                  "Security__HstsDays": "30"
+                }
+              }
+            }')
+
+          ENDPOINT=$(jq -n '{
+            containerName: "app",
+            containerPort: 8080,
+            healthCheck: {
+              path: "/api/health",
+              intervalSeconds: 10,
+              timeoutSeconds: 5,
+              healthyThreshold: 2,
+              unhealthyThreshold: 3,
+              successCodes: "200"
+            }
+          }')
+
+          aws lightsail create-container-service-deployment \
+            --region "$AWS_REGION" \
+            --service-name "$SERVICE_NAME" \
+            --containers "$CONTAINERS" \
+            --public-endpoint "$ENDPOINT"
+
+      # Lightsail keeps the previous deployment serving until the new one passes
+      # its health check, so "ACTIVE" here means the new image is actually
+      # answering /api/health — not merely that it started.
+      - name: Wait for the deployment to go live
+        run: |
+          for i in $(seq 1 60); do
+            STATE=$(aws lightsail get-container-services \
+              --region "$AWS_REGION" --service-name "$SERVICE_NAME" \
+              --query 'containerServices[0].currentDeployment.state' --output text)
+            echo "deployment: $STATE"
+            case "$STATE" in
+              ACTIVE) exit 0 ;;
+              FAILED) echo "::error::Deployment failed; previous version is still serving."; exit 1 ;;
+            esac
+            sleep 10
+          done
+          echo "::error::Timed out waiting for the deployment."
+          exit 1
+
+      - name: Smoke test
+        run: |
+          URL=$(aws lightsail get-container-services \
+            --region "$AWS_REGION" --service-name "$SERVICE_NAME" \
+            --query 'containerServices[0].url' --output text)
+
+          curl -sf "${URL%/}/api/health" | tee /dev/stderr | grep -q '"ok"'
+
+          # The CSP is the compensating control for keeping the session in
+          # localStorage. Shipping without it is not a cosmetic regression.
+          curl -sI "${URL%/}/" | grep -qi 'content-security-policy' \
+            || { echo "::error::No Content-Security-Policy on the deployed app."; exit 1; }
+
+          echo "Live at $URL"

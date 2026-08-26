@@ -10,7 +10,27 @@ enabled = true
 port = 54321
 # Schemas to expose in your API. Tables, views and stored procedures in this schema will get API
 # endpoints. `public` and `graphql_public` schemas are included by default.
-schemas = ["public", "graphql_public"]
+#
+# `public` is deliberately NOT in this list.
+#
+# The browser holds a publishable key and a valid user JWT, so while `public`
+# was exposed, PostgREST at /rest/v1 was a second, equal route to every table —
+# and the .NET API was one door on a building with two. Nothing was readable
+# that RLS did not already allow, so this is not a fix for a leak; it is what
+# makes the boundary real. With `public` unexposed, the only process that can
+# reach `tags` and `time_blocks` is the API, which is the only place request
+# validation, rate limiting and audit logging can ever live.
+#
+# Consequences, so nobody re-adds it to fix a symptom:
+#   * The API is unaffected. It connects to Postgres directly and never speaks
+#     to PostgREST.
+#   * Supabase Auth is unaffected. GoTrue is a separate service on /auth/v1.
+#   * scripts/seed-demo.mjs wrote through /rest/v1 and no longer can — it now
+#     connects to the database directly. See its header.
+#
+# Mirror this in the hosted project: Project Settings -> Data API -> Exposed
+# schemas, or `supabase config push`.
+schemas = ["graphql_public"]
 # Extra schemas to add to the search_path of every request.
 extra_search_path = ["public", "extensions"]
 # The maximum number of rows returns from a view, table, or stored procedure. Limits payload size
@@ -156,11 +176,25 @@ max_indexes = 5
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://127.0.0.1:3000"
+#
+# localhost, not 127.0.0.1, and the difference is load-bearing: this is the
+# origin baked into every emailed link, and `next dev` serves its dev assets
+# only to the hostname it was started on (see allowedDevOrigins in
+# next.config.ts). Pointing recovery emails at 127.0.0.1 produced a page whose
+# every script 403'd, so React never hydrated and the password form fell back to
+# a native GET — putting the new password in the URL bar.
+#
+# Set this to the deployed origin before shipping, and mirror it in the hosted
+# project's Auth → URL Configuration (or `supabase config push`).
+# 5173 is Vite's dev port. In production this is the origin the .NET API
+# serves the SPA from, since the same process serves both.
+site_url = "http://localhost:5173"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+# 5251 is the API serving a production build of the SPA — the shape a
+# deployment actually has, so emailed links can be tested against it too.
+additional_redirect_urls = ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5251", "http://127.0.0.1:5251"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
@@ -223,9 +257,24 @@ enable_signup = true
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
+#
+# Off locally so `npm run e2e` and the demo account don't need an inbox round
+# trip. It is ON by default on a hosted project, and that path works: flip this
+# to true, `supabase stop && supabase start`, and the confirmation email lands
+# in Mailpit at http://127.0.0.1:54324 with a link through /auth/confirm.
 enable_confirmations = false
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
-secure_password_change = false
+#
+# On, as defence in depth — but note what it does and doesn't do. The gate is
+# session *recency*, not verification of the `current_password` sent with the
+# request: a recently-minted session passes even when that field is wrong
+# (verified against this stack). The real check is in AuthProvider, which signs
+# in with the supplied current password before changing anything.
+#
+# Neither of the app's two password-change paths is inconvenienced by this:
+# /account has just re-signed-in to do that check, and /account/update-password
+# is reached through /auth/confirm, which authenticated the user moments before.
+secure_password_change = true
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
 max_frequency = "1s"
 # Number of characters used in the email OTP.
@@ -242,6 +291,22 @@ otp_expiry = 3600
 # pass = "env(SENDGRID_API_KEY)"
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
+
+# Both templates build their own link from {{ .TokenHash }} rather than using
+# the default {{ .ConfirmationURL }}, because this is a server-rendered app:
+# @supabase/ssr forces the PKCE flow, whose `?code=` only resolves in the browser
+# that started it. /auth/confirm verifies the token hash server-side instead.
+# See src/app/auth/confirm/route.ts.
+#
+# `supabase config push` sends these to the linked project, so the templates are
+# version-controlled rather than hand-edited in the dashboard.
+[auth.email.template.confirmation]
+subject = "Confirm your Tracksesh account"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.recovery]
+subject = "Reset your Tracksesh password"
+content_path = "./supabase/templates/recovery.html"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]

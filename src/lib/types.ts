@@ -8,6 +8,13 @@ export interface Tag {
   created_at: string;
 }
 
+/** One row of the `tag_usage()` RPC: how much history a tag carries. */
+export interface TagUsage {
+  tag_id: number;
+  block_count: number;
+  total_seconds: number;
+}
+
 /**
  * Mirrors public.time_blocks — the one core object.
  *

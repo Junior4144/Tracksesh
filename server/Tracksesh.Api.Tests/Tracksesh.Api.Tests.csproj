@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+
+    <!--
+      The .NET 10 SDK no longer runs tests through VSTest. xunit.v3 ships its own
+      Microsoft.Testing.Platform runner, which this opts into; without it
+      `dotnet test` fails outright rather than falling back.
+    -->
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+    <OutputType>Exe</OutputType>
+
+    <!--
+      xUnit1051 wants every cancellable call to take TestContext's token. These
+      are sub-second integration tests against a local database; threading a
+      token through each Dapper call would triple the line count of the
+      assertions without making anything more cancellable in practice.
+    -->
+    <NoWarn>$(NoWarn);xUnit1051</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      Not a PackageReference to Microsoft.AspNetCore.Http: that package is the
+      ASP.NET Core 2.x line and resolves to 2.3.x, which is not what this app
+      runs on. The framework reference is how a test project borrows the same
+      shared framework as the web project it exercises.
+    -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dapper" Version="2.1.79" />
+    <PackageReference Include="Npgsql" Version="10.0.3" />
+    <!-- xunit.v3 brings its own runner; no Test.Sdk / VSTest adapter needed. -->
+    <PackageReference Include="xunit.v3" Version="4.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Tracksesh.Api\Tracksesh.Api.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- What `dotnet new xunit` puts here; ImplicitUsings alone does not add it. -->
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

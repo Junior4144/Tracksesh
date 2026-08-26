@@ -1,0 +1,10 @@
+-- Intentionally empty.
+--
+-- This was an unnamed `supabase migration new` scaffold that got committed
+-- before anything was written into it. By the time that was noticed it had
+-- already been recorded as applied on both the local stack and the linked
+-- project, so filling it in now would be a migration that no existing database
+-- ever runs. It is kept as a no-op rather than deleted, because deleting it
+-- would leave both databases with a history entry that has no file.
+--
+-- The work it was going to hold went into the migration after it.

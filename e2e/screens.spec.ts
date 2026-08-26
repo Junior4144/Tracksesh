@@ -59,5 +59,36 @@ test('capture screens', async ({ page }, testInfo) => {
       await page.waitForTimeout(400);
       await page.screenshot({ path: `${dir}/activity-day-${theme}.png`, fullPage: true });
     }
+
+    await page.goto('/tags');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(600);
+    await page.screenshot({ path: `${dir}/tags-${theme}.png`, fullPage: true });
+
+    await page.goto('/account');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(600);
+    await page.screenshot({ path: `${dir}/account-${theme}.png`, fullPage: true });
   }
+});
+
+/**
+ * The signed-out screens, captured separately because the session in this
+ * project's storage state would redirect straight past them.
+ */
+test.describe('signed out', () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test('capture auth screens', async ({ page }, testInfo) => {
+    const dir = `test-results/screens/${testInfo.project.name}`;
+
+    for (const path of ['/login', '/forgot-password', '/auth/link-expired']) {
+      await page.goto(path);
+      await page.waitForLoadState('domcontentloaded');
+      await page.screenshot({
+        path: `${dir}/${path.replace(/\//g, '-').replace(/^-/, '')}.png`,
+        fullPage: true,
+      });
+    }
+  });
 });

@@ -201,7 +201,12 @@ activity view offers a table view — identity is never colour alone.
 3. ~~Stopwatch rewritten onto the DB row, with the label-on-stop prompt.~~ ✓
 4. ~~Activity view: day strip + backfill.~~ ✓
 5. ~~Charts: per-tag totals, daily trend, headline stats.~~ ✓
-6. Tag management (rename, recolour, archive) — currently tags can only be
-   created, from the label prompt.
-7. Editing an existing block (retag, adjust times) — today it can only be
-   deleted from the session table.
+6. ~~Tag management (rename, recolour, archive).~~ ✓ `/tags`
+7. ~~Editing an existing block (retag, adjust times).~~ ✓ From the session table
+   or by clicking a block on the day strip.
+
+That is v1. What is deliberately still missing: dragging a range out of the day
+strip to backfill (the form does it, the drag doesn't), and an overnight
+backfill — `AddBlockForm` takes one date, so a block crossing midnight can only
+be *authored* by the stopwatch, though the editor can move one across a day
+boundary after the fact.

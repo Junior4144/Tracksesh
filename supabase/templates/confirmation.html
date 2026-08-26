@@ -1,0 +1,18 @@
+<!--
+  Sign-up confirmation email. Same reasoning as recovery.html: {{ .TokenHash }}
+  verified server-side by /auth/confirm, not the default {{ .ConfirmationURL }},
+  so the link works from whichever device opens the inbox.
+
+  `next` falls back to /dashboard when the sign-up didn't specify a redirect.
+-->
+<h2>Confirm your email address</h2>
+
+<p>Follow the link below to confirm this address and finish setting up Tracksesh.</p>
+
+<p>
+  <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next={{ .RedirectTo }}">
+    Confirm email address
+  </a>
+</p>
+
+<p>If you didn't create a Tracksesh account, you can ignore this email.</p>

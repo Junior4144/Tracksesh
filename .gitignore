@@ -5,19 +5,21 @@
 npm-debug.log
 yarn-error.log
 
-# Next.js
-/.next/
-/out/
-next-env.d.ts
+# Vite
+/dist/
 
 # TypeScript
 *.tsbuildinfo
 
 # Production
 /build
-/dist
 
-# Env — never commit real keys; .env.local.example is the template
+# The SPA build output — Vite writes it here so `dotnet publish` picks it up.
+# Generated, so it is not committed; `npm run build` recreates it.
+/server/Tracksesh.Api/wwwroot/*
+!/server/Tracksesh.Api/wwwroot/.gitkeep
+
+# Env — never commit real keys; .env.example is the template
 .env
 .env*.local
 
@@ -41,6 +43,10 @@ next-env.d.ts
 !.vscode/extensions.json
 !.vscode/mcp.json
 .history/*
+
+# .NET
+/server/**/bin/
+/server/**/obj/
 
 # Vercel / Terraform (later steps)
 .vercel

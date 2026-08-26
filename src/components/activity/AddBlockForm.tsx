@@ -1,17 +1,9 @@
-'use client';
-
 import { useState } from 'react';
 import { createManualBlock } from '@/lib/blocks';
-import { createClient } from '@/lib/supabase/client';
+import { combine, dateValue, validateBlockRange } from '@/lib/edits';
 import { formatTotal } from '@/lib/time';
 import { slotColor, type Tag } from '@/lib/types';
 import { CheckSmallIcon } from '@/components/icons';
-
-/** `YYYY-MM-DD` for a date input, in local time (toISOString would shift it). */
-function dateValue(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
 
 /**
  * Backfill — "I read for 36 minutes at 2pm and forgot to hit start".
@@ -19,13 +11,11 @@ function dateValue(d: Date): string {
  * Produces exactly the same object as the stopwatch, only with source='manual'.
  */
 export function AddBlockForm({
-  userId,
   tags,
   day,
   onAdded,
   onCancel,
 }: {
-  userId: string;
   tags: Tag[];
   day: Date;
   onAdded: () => void;
@@ -39,33 +29,26 @@ export function AddBlockForm({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const startedAt = new Date(`${date}T${start}`);
-  const endedAt = new Date(`${date}T${end}`);
-  const valid = !Number.isNaN(startedAt.getTime()) && !Number.isNaN(endedAt.getTime());
-  const durationSeconds = valid ? (endedAt.getTime() - startedAt.getTime()) / 1000 : 0;
+  const startedAt = combine(date, start);
+  const endedAt = combine(date, end);
+  const durationSeconds = Number.isNaN(startedAt.getTime()) || Number.isNaN(endedAt.getTime())
+    ? 0
+    : (endedAt.getTime() - startedAt.getTime()) / 1000;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+
+    // A backfilled block was never paused, so there is no pause total to fit.
+    const problem = validateBlockRange({ startedAt, endedAt, nowMs: Date.now() });
+    if (problem) {
+      setError(problem);
+      return;
+    }
+
     setError(null);
-
-    if (!valid) {
-      setError('That date or time is not valid.');
-      return;
-    }
-    if (durationSeconds <= 0) {
-      // Overnight blocks are legitimate, but silently rolling the end forward a
-      // day would be a guess. Ask instead.
-      setError('The end time must be after the start time.');
-      return;
-    }
-    if (endedAt.getTime() > Date.now()) {
-      setError("That's in the future — this is a record of what you did.");
-      return;
-    }
-
     setSaving(true);
     try {
-      await createManualBlock(createClient(), userId, { startedAt, endedAt, tagId, note });
+      await createManualBlock({ startedAt, endedAt, tagId, note });
       onAdded();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save that block.');

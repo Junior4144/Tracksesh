@@ -23,7 +23,7 @@ export default defineConfig({
   fullyParallel: true,
   reporter: process.env.CI ? 'github' : 'list',
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: 'http://localhost:5173',
     // Keeps runs comparable regardless of the machine's locale/zone.
     locale: 'en-GB',
     timezoneId: 'Europe/London',
@@ -49,10 +49,27 @@ export default defineConfig({
       use: { ...devices['Pixel 7'], storageState: STORAGE_STATE },
     },
   ],
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3000/login',
-    reuseExistingServer: true,
-    timeout: 120_000,
-  },
+  /*
+   * Both halves, because the app is now two processes.
+   *
+   * The API first: the dev server proxies /api to it, so a run that started
+   * only Vite would render every page with its data requests failing and report
+   * the result as a layout problem. Playwright waits for each `url` to answer
+   * before starting the next, and /api/health is the one route that needs no
+   * token.
+   */
+  webServer: [
+    {
+      command: 'npm run api',
+      url: 'http://localhost:5251/api/health',
+      reuseExistingServer: true,
+      timeout: 120_000,
+    },
+    {
+      command: 'npm run dev',
+      url: 'http://localhost:5173/login',
+      reuseExistingServer: true,
+      timeout: 120_000,
+    },
+  ],
 });

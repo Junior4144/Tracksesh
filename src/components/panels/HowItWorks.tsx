@@ -1,6 +1,4 @@
-'use client';
-
-import Link from 'next/link';
+import { Link } from 'react-router';
 import { InfoPanel, PanelSteps } from './InfoPanel';
 import { LightbulbIcon } from '@/components/icons';
 
@@ -36,7 +34,7 @@ export function HowItWorks() {
               <>
                 {' '}
                 <strong>+ Add time</strong> on{' '}
-                <Link href="/activity" className="link-accent">
+                <Link to="/activity" className="link-accent">
                   Activity
                 </Link>
                 . Typed-in time counts the same.

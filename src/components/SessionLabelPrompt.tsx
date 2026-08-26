@@ -1,10 +1,9 @@
-'use client';
-
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
+import { useEffect, useRef, useState } from 'react';
+import { ApiError } from '@/lib/api';
 import { createTag, fetchTags } from '@/lib/blocks';
+import { nextSlot } from '@/lib/edits';
 import { blockDuration, formatClock, formatTotal } from '@/lib/time';
-import { TAG_SLOTS, slotColor, type Tag, type TimeBlock } from '@/lib/types';
+import { slotColor, type Tag, type TimeBlock } from '@/lib/types';
 import { CheckSmallIcon, TagIcon, TrashIcon } from '@/components/icons';
 
 /**
@@ -26,8 +25,6 @@ export function SessionLabelPrompt({
   onDiscard: () => void;
   onDismiss: () => void;
 }) {
-  const supabase = useMemo(() => (isSupabaseConfigured() ? createClient() : null), []);
-
   const [tags, setTags] = useState<Tag[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
   const [note, setNote] = useState('');
@@ -38,15 +35,14 @@ export function SessionLabelPrompt({
   const noteRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!supabase) return;
     let active = true;
-    fetchTags(supabase)
+    fetchTags()
       .then((rows) => active && setTags(rows))
       .catch(() => active && setTagError('Could not load your tags.'));
     return () => {
       active = false;
     };
-  }, [supabase]);
+  }, []);
 
   // Esc keeps the block rather than discarding it — the safe default.
   useEffect(() => {
@@ -62,24 +58,22 @@ export function SessionLabelPrompt({
 
   async function addTag() {
     const name = newTagName.trim();
-    if (!name || !supabase) return;
+    if (!name) return;
 
     setTagError(null);
     try {
       // Next slot in fixed order, wrapping once all eight are used — hues are
       // never generated, so a new tag can't land on top of an existing one.
-      const slot = TAG_SLOTS[tags.length % TAG_SLOTS.length];
-      const tag = await createTag(supabase, block.user_id, name, slot);
+      const tag = await createTag(name, nextSlot(tags.length));
       setTags((prev) => [...prev, tag].sort((a, b) => a.name.localeCompare(b.name)));
       setSelected(tag.id);
       setNewTagName('');
       setCreating(false);
       noteRef.current?.focus();
     } catch (e) {
-      const message = e instanceof Error ? e.message : '';
-      setTagError(
-        message.includes('duplicate') ? 'You already have a tag with that name.' : 'Could not create that tag.'
-      );
+      // The API already words a name clash for a human; anything else is a
+      // failure to reach it at all.
+      setTagError(e instanceof ApiError ? e.message : 'Could not create that tag.');
     }
   }
 
