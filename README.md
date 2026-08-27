@@ -1,5 +1,8 @@
 # Tracksesh
 
+**Live at [www.tracksesh.com](https://www.tracksesh.com)** — there is a demo
+account on the sign-up page if you would rather not make one.
+
 A time ledger: a stopwatch that records **what** you spent time on, so you can
 see where your hours went. React (Vite) + ASP.NET Core + Supabase, Bootstrap 5.
 
