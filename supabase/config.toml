@@ -193,10 +193,10 @@ enabled = true
 # No trailing slash: GoTrue concatenates paths onto it, and a slash here
 # produces links with a double slash that some mail clients mangle.
 #
-# When tracksesh.com is attached to the container service, change this to
-# https://tracksesh.com, leave the Lightsail URL in the allow list below, and
-# re-run the migrate workflow to push it.
-site_url = "https://tracksesh.vnf5wpysjg2mc.us-west-2.cs.amazonlightsail.com"
+# The domain is attached now. Both the apex and www serve the app directly —
+# neither redirects to the other — so both are listed below; this is only the
+# default destination.
+site_url = "https://www.tracksesh.com"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
@@ -207,6 +207,8 @@ site_url = "https://tracksesh.vnf5wpysjg2mc.us-west-2.cs.amazonlightsail.com"
 # so development keeps working: 5173 is Vite, 5251 is the API serving a
 # production build, which is the shape a deployment actually has.
 additional_redirect_urls = [
+  "https://www.tracksesh.com",
+  "https://tracksesh.com",
   "https://tracksesh.vnf5wpysjg2mc.us-west-2.cs.amazonlightsail.com",
   "http://localhost:5173",
   "http://127.0.0.1:5173",
