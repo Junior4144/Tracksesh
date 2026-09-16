@@ -8,12 +8,19 @@ on:
         required: true
         default: ''
 
+# One deploy at a time, and never cancelled halfway.
+#
+# Two concurrent runs would both push an image and then both ask for "the newest
+# one", and at least one would deploy the other's build. `cancel-in-progress` is
+# deliberately false: aborting between the push and the deployment leaves the
+# service on its old version with an orphaned image, which is recoverable but
+# confusing.
+concurrency:
+  group: deploy-lightsail
+  cancel-in-progress: false
+
 permissions:
   contents: read
-
-concurrency:
-  group: lightsail-production
-  cancel-in-progress: false
 
 jobs:
   validate-request:
@@ -64,6 +71,28 @@ jobs:
           test -n "$SERVICE_NAME" || { echo '::error::Missing LIGHTSAIL_SERVICE_NAME'; exit 1; }
           node scripts/prepare-deployment.mjs
 
+      # TEMPORARY — delete once the deploy is green again.
+      #
+      # Prints the identity the runner actually presents to AWS, which is the
+      # one thing "Not authorized to perform sts:AssumeRoleWithWebIdentity"
+      # refuses to tell you. Whatever `sub` says has to match the StringLike
+      # condition on the role's trust policy character for character.
+      #
+      # Only the four claims are echoed, never the token: it is a live
+      # credential for the next few minutes, and this repository's logs are
+      # public now.
+      - name: Show the OIDC subject
+        run: |
+          TOKEN=$(curl -sH "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | jq -r .value)
+          echo "$TOKEN" | cut -d. -f2 | python3 -c "
+          import sys, base64, json
+          p = sys.stdin.read().strip()
+          d = json.loads(base64.urlsafe_b64decode(p + '=' * (-len(p) % 4)))
+          print(json.dumps({k: d.get(k) for k in
+                ('sub', 'aud', 'repository', 'repository_owner')}, indent=2))
+          "
+
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
@@ -88,10 +117,30 @@ jobs:
         id: push
         run: |
           aws lightsail push-container-image \
-            --region "$AWS_REGION" --service-name "$SERVICE_NAME" \
-            --label app --image "tracksesh:$GITHUB_SHA" | tee "$RUNNER_TEMP/push.log"
-          IMAGE=$(grep -oE '"?:[a-zA-Z0-9._-]+\.app\.[0-9]+"?' "$RUNNER_TEMP/push.log" | tail -1 | tr -d '"')
-          test -n "$IMAGE" || { echo '::error::Could not determine pushed image'; exit 1; }
+            --region "$AWS_REGION" \
+            --service-name "$SERVICE_NAME" \
+            --label app \
+            --image "tracksesh:${{ github.sha }}"
+
+          # Lightsail rewrites the tag to `:<service>.<label>.<n>` and only that
+          # name is deployable, so it has to be read back rather than assumed.
+          #
+          # Asked for, not scraped from the command's output: the human-readable
+          # line it prints is not a contract, and a wording change would leave
+          # this parsing a message that no longer contains what it wants. Sorting
+          # by createdAt rather than trusting the list order makes "the one we
+          # just pushed" explicit.
+          IMAGE=$(aws lightsail get-container-images \
+            --region "$AWS_REGION" \
+            --service-name "$SERVICE_NAME" \
+            --query 'sort_by(containerImages, &createdAt)[-1].image' \
+            --output text)
+
+          if [ -z "$IMAGE" ] || [ "$IMAGE" = "None" ]; then
+            echo "::error::Could not determine the pushed image name."
+            exit 1
+          fi
+
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
 
       - name: Deploy
