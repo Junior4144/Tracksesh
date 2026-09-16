@@ -335,12 +335,38 @@ Repository **secrets**:
 | `POSTGRES_CONNECTION` | Npgsql connection string. Runtime only — never a build arg |
 | `SUPABASE_ACCESS_TOKEN` | For `migrate.yml` |
 | `SUPABASE_DB_PASSWORD` | For `migrate.yml` |
+| `TRAFFIC_RUNTIME_CONFIG` | JSON runtime settings for admin/site analytics; store in the `production` environment. Prepared from `.env` with `node scripts/configure-traffic-actions.mjs --apply` using authenticated `gh`. |
 
 The split is not cosmetic. `VITE_*` are read at **build** time and inlined into
 the bundle, so they are permanently in the image and must be public values — a
 `sb_secret_…` passed as a build arg is readable by anyone who pulls it.
 Everything the API reads is loaded at **startup** from the container's
 environment, so it stays out of every layer.
+
+The deployment now runs the reusable CI workflow against the exact commit before
+building/pushing the release image. It enforces `main`, serializes production
+deployments, validates runtime configuration, waits for the exact Lightsail
+deployment version/image, then smoke-tests the service URL and `tracksesh.com`.
+CI includes the real database-isolation suite and admin/site authorization tests.
+
+Prepare analytics configuration once before deploying this change:
+
+```bash
+node scripts/configure-traffic-actions.mjs          # names only; no upload
+node scripts/configure-traffic-actions.mjs --apply  # authenticated gh required
+```
+
+The helper uploads an allowlisted JSON object to `TRAFFIC_RUNTIME_CONFIG` in the
+existing GitHub `production` environment. It preserves the `.env` site UUID and
+shared provider credentials. It does not upload the full `.env`, dispatch an
+Action, or deploy anything. The release configuration explicitly disables visitor
+capture and forwarded-IP trust; it enables querying existing analytics and target
+DNS/proxycheck data. Visitor capture requires a separate approved activation and
+verified ingress configuration. No database migration is needed for this feature.
+
+Local `.env*` and `appsettings.Local*.json` are excluded from Docker's build context.
+Runtime secrets are passed in a temporary private JSON file, deleted after the
+AWS request, and the AWS response is filtered so environments are not printed.
 
 Docker's linter warns `SecretsUsedInArgOrEnv` on `VITE_SUPABASE_PUBLISHABLE_KEY`
 because the name ends in `KEY`. It is a publishable key; the warning is a false

@@ -31,6 +31,30 @@ be stale and RLS policy counts do not prove correct ownership predicates.
 
 ## Configuration
 
+### Current GitHub Actions / Lightsail release
+
+The production workflow is `.github/workflows/deploy.yml`, targeting AWS
+Lightsail. It runs the reusable CI checks, validates runtime settings, then
+passes them to the container at startup. No PostHog, Redis, proxycheck or
+Cloudflare secret is a Docker build argument. The existing source UUID must
+travel with the deployment so historical site-scoped queries remain consistent.
+
+`node scripts/configure-traffic-actions.mjs` validates the local configuration
+and previews setting **names only**. With `--apply`, authenticated GitHub CLI
+uploads the allowlisted JSON as production-environment secret
+`TRAFFIC_RUNTIME_CONFIG` in `Junior4144/tracksesh`. The workflow fails before
+building/pushing if this secret or required settings are missing. No workflow is
+dispatched by the helper. It deliberately omits the legacy shared admin token,
+PostHog personal/setup keys, and all browser-prefixed settings.
+
+The release currently forces `TRAFFIC_ENABLED=false`,
+`TRAFFIC_INGRESS_LOCKED=false`, and `TRAFFIC_TRUSTED_PROXY_HOPS=0`, independently
+of local `.env` values. Lightsail's transport proxy setting does not prove that
+Cloudflare cannot be bypassed. Report queries, DNS and target-IP enrichment
+remain available; visitor capture needs separate activation. Standard Lightsail
+containers run continuously; the earlier Cloud Run background-CPU note applies
+only if the app is moved to Cloud Run.
+
 `npm run api` now loads `.env` with Node's dotenv parser and starts .NET. Existing
 process environment values take precedence. Direct `dotnet run` does not load
 `.env`. Database and Supabase settings remain in the existing local API settings

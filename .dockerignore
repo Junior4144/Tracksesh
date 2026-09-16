@@ -18,10 +18,14 @@ server/Tracksesh.Api/wwwroot
 .env
 .env.local
 .env*.local
+.env*
+!.env.example
+**/appsettings.Local*.json
 
 # Local-only tooling and artefacts
 .agents
 .claude
+.codex
 .vscode
 .next
 supabase/.branches

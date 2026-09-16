@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { loadEnvFile } from 'node:process';
-loadEnvFile('.env');
+import { existsSync } from 'node:fs';
+if (existsSync('.env')) loadEnvFile('.env');
 const base = process.env.ADMIN_CHECK_BASE ?? 'http://localhost:5251';
 for (const path of ['/api/admin/', '/api/admin/traffic']) {
   const response = await fetch(base + path);
