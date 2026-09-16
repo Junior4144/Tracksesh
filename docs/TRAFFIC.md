@@ -34,7 +34,8 @@ be stale and RLS policy counts do not prove correct ownership predicates.
 ### Current GitHub Actions / Lightsail release
 
 The production workflow is `.github/workflows/deploy.yml`, targeting AWS
-Lightsail. It runs the reusable CI checks, validates runtime settings, then
+Lightsail. Every push to `main` starts a deployment; manual runs remain available
+for retries. It runs the reusable CI checks, validates runtime settings, then
 passes them to the container at startup. No PostHog, Redis, proxycheck or
 Cloudflare secret is a Docker build argument. The existing source UUID must
 travel with the deployment so historical site-scoped queries remain consistent.

@@ -201,15 +201,15 @@ rather than a page of HTML.
 | Workflow | Trigger | Does |
 |---|---|---|
 | `ci.yml` | every PR and push to main | Every check, against a real Supabase stack, plus a throwaway image build |
-| `deploy.yml` | manual, type `deploy` | Builds the image, pushes it to Lightsail, waits for health, smoke-tests |
+| `deploy.yml` | push to main; manual rerun with `deploy` | Runs CI, builds the image, pushes it to Lightsail, waits for health, smoke-tests |
 | `migrate.yml` | manual, type the project ref | `supabase db push` + `config push`; dry run by default |
 
-Deploy and migrate are separate and both manual on purpose. A schema change
-riding along with an unrelated deploy fails together with it, and rolling back
-the code does not roll back the migration. Keeping them apart forces the
-ordering to be decided rather than discovered: additive migrations before the
-code that uses them, destructive ones only after the code that stopped needing
-them is live.
+Every push or merge to `main` automatically starts deployment to `tracksesh.com`
+after the reusable CI checks pass. Manual deployment remains available for retries.
+Database migrations remain a separate manual workflow: apply additive migrations
+before pushing code that uses them, and destructive migrations only after the
+code that stopped needing them is live. Rolling back code does not roll back a
+migration.
 
 CI runs the RLS isolation tests and the CSP check on **pull requests**, not just
 on main. That is the point of them — a branch that quietly removes the thing
@@ -350,6 +350,8 @@ The deployment now runs the reusable CI workflow against the exact commit before
 building/pushing the release image. It enforces `main`, serializes production
 deployments, validates runtime configuration, waits for the exact Lightsail
 deployment version/image, then smoke-tests the service URL and `tracksesh.com`.
+Smoke checks retry up to 12 times with five-second pauses while traffic switches
+to the new release; every route and authorization check must pass in one attempt.
 CI includes the real database-isolation suite and admin/site authorization tests.
 
 Prepare analytics configuration once before deploying this change:
