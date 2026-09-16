@@ -19,67 +19,34 @@
   --text-title: 1.75rem;
   --shadow-overlay: 0 16px 48px #0003;
 }
-:root,
-[data-theme='dark'] {
-  color-scheme: dark;
-  --bg-primary: #171c1b;
-  --bg-secondary: #242c2a;
-  --card-bg: #1e2523;
-  --input-bg: #171c1b;
-  --border-color: #3e4945;
-  --border-control: #718078;
-  --text-primary: #edf2ee;
-  --text-muted: #a5b2ab;
-  --accent: #87d5bb;
-  --accent-hover: #a9e5d1;
-  --accent-rgb: 135, 213, 187;
-  --on-accent: #142b23;
-  --danger: #ff9a9a;
-  --danger-solid: #b52e3c;
-  --warning: #ebc16e;
-  --success: #87d5bb;
-  --ring-track: #303b36;
-  --series-blue: #3987e5;
-  --series-orange: #d95926;
-  --series-aqua: #199e70;
-  --series-yellow: #c98500;
-  --series-magenta: #d55181;
-  --series-green: #008300;
-  --series-violet: #9085e9;
-  --series-red: #e66767;
-  --series-none: #8b958f;
-}
-[data-theme='light'] {
+:root {
   color-scheme: light;
-  --bg-primary: #f6f7f3;
-  --bg-secondary: #e9eee8;
-  --card-bg: #fff;
-  --input-bg: #fff;
-  --border-color: #cbd3cb;
-  --border-control: #7a8980;
-  --text-primary: #202e27;
-  --text-muted: #58685e;
-  --accent: #23664f;
-  --accent-hover: #184b3a;
-  --accent-rgb: 35, 102, 79;
-  --on-accent: #fff;
-  --danger: #a32232;
-  --danger-solid: #a32232;
-  --warning: #815900;
-  --success: #23664f;
-  --ring-track: #e1e7df;
-  --series-blue: #2a78d6;
-  --series-orange: #eb6834;
-  --series-aqua: #1baf7a;
-  --series-yellow: #eda100;
-  --series-magenta: #e87ba4;
-  --series-green: #008300;
-  --series-violet: #4a3aa7;
-  --series-red: #e34948;
-  --series-none: #77857b;
-}
-:root,
-[data-theme] {
+  --bg-primary: #d6d7ce;
+  --bg-secondary: #c7ccc1;
+  --card-bg: #e7e8df;
+  --input-bg: #eeeee6;
+  --border-color: #acb3a7;
+  --border-control: #737f72;
+  --text-primary: #27332c;
+  --text-muted: #505f52;
+  --accent: #2c6553;
+  --accent-hover: #204d3f;
+  --accent-rgb: 44, 101, 83;
+  --on-accent: #f5f4eb;
+  --danger: #992d38;
+  --danger-solid: #992d38;
+  --warning: #715000;
+  --success: #2c6553;
+  --ring-track: #c3cbbd;
+  --series-blue: #306eac;
+  --series-orange: #a95728;
+  --series-aqua: #267b64;
+  --series-yellow: #886c12;
+  --series-magenta: #a54470;
+  --series-green: #427533;
+  --series-violet: #6c56a0;
+  --series-red: #b04542;
+  --series-none: #697569;
   --bs-body-bg: var(--bg-primary);
   --bs-body-color: var(--text-primary);
   --bs-emphasis-color: var(--text-primary);

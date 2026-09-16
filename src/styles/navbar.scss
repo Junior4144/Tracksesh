@@ -53,17 +53,6 @@
     font-weight: 600;
   }
 }
-.btn-theme-toggle {
-  color: var(--text-muted);
-  display: grid;
-  place-items: center;
-  width: 40px;
-  padding: 0.5rem;
-  &:hover {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-  }
-}
 .nav-menu-toggle {
   display: none;
 }

@@ -43,11 +43,9 @@ async function visit(path, label) {
 try {
   await visit('/login', '/login');
 
-  // The theme boot script is external now; if the CSP blocked it, <html> would
-  // have no data-theme at all.
-  const theme = await page.getAttribute('html', 'data-theme');
-  if (!theme) problems.push('theme-boot.js did not run — data-theme is unset');
-  else console.log(`  theme boot ran (data-theme=${theme})`);
+  const scheme = await page.locator('html').evaluate((el) => getComputedStyle(el).colorScheme);
+  if (scheme !== 'light') problems.push('The fixed neutral color scheme did not load');
+  else console.log('  neutral presentation loaded');
 
   await page.locator('#email').fill(EMAIL);
   await page.locator('#password').fill(PASSWORD);

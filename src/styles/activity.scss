@@ -323,10 +323,8 @@
 }
 
 // ── Session table ────────────────────────────────────────────────────────────
-// The table view is the exact-numbers companion to the charts, and the relief
-// the palette validator requires for the light-mode slots under 3:1 contrast.
-// It has to be readable in both themes, so every Bootstrap table variable is
-// mapped rather than left on its light defaults.
+// Tables provide exact values alongside charts. Bootstrap table variables use
+// the shared palette to keep surfaces and text consistent.
 .session-card {
   padding: 0.35rem 0.25rem;
   overflow: hidden;

@@ -1,7 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 
 import { AuthProvider } from '@/components/AuthProvider';
-import { ThemeProvider } from '@/components/ThemeProvider';
 import { TimerProvider } from '@/components/TimerProvider';
 import { Navbar } from '@/components/Navbar';
 import { AuthOnly, GuestOnly } from '@/routes/guards';
@@ -29,16 +28,14 @@ import LinkExpiredPage from '@/pages/LinkExpiredPage';
 export function App() {
   return (
     <BrowserRouter>
-      <ThemeProvider>
-        <AuthProvider>
-          <TimerProvider>
-            <div className="app-shell">
-              <Navbar />
-              <AppRoutes />
-            </div>
-          </TimerProvider>
-        </AuthProvider>
-      </ThemeProvider>
+      <AuthProvider>
+        <TimerProvider>
+          <div className="app-shell">
+            <Navbar />
+            <AppRoutes />
+          </div>
+        </TimerProvider>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

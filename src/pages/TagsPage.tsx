@@ -378,8 +378,8 @@ function TagFields({
           aria-label="Tag name"
         />
 
-        {/* Eight fixed slots, not a colour picker: each theme resolves its own
-            step per slot, and a free-form hue lands wherever it likes relative
+        {/* Eight fixed slots, not a colour picker: the shared palette defines one
+            color per slot, and a free-form hue lands wherever it likes relative
             to the ones checked for colour-blind separation. */}
         <div className="tag-slots d-flex gap-1" role="group" aria-label="Colour">
           {TAG_SLOTS.map((slot) => (

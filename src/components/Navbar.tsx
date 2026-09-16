@@ -1,8 +1,7 @@
 ﻿import { useState } from 'react';
 import { Link, NavLink } from 'react-router';
 import { useAuth } from '@/components/AuthProvider';
-import { useTheme } from '@/components/ThemeProvider';
-import { BrandMark, MoonIcon, SunIcon } from '@/components/icons';
+import { BrandMark } from '@/components/icons';
 
 const links = [
   ['/dashboard', 'Timer'],
@@ -13,7 +12,6 @@ const links = [
 
 export function Navbar() {
   const { isLoggedIn, logout } = useAuth();
-  const { isDark, toggle } = useTheme();
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -57,8 +55,8 @@ export function Navbar() {
                 </NavLink>
               ))}
             </div>
-            <div className="nav-utilities">
-              {isLoggedIn && (
+            {isLoggedIn && (
+              <div className="nav-utilities">
                 <button
                   className="btn btn-quiet"
                   onClick={() => {
@@ -68,16 +66,8 @@ export function Navbar() {
                 >
                   Sign out
                 </button>
-              )}
-              <button
-                className="btn btn-theme-toggle"
-                onClick={toggle}
-                aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-                title={isDark ? 'Light mode' : 'Dark mode'}
-              >
-                {isDark ? <SunIcon size={18} /> : <MoonIcon size={18} />}
-              </button>
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </nav>

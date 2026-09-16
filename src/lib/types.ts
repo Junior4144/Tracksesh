@@ -43,8 +43,7 @@ export interface TimeBlockWithTag extends TimeBlock {
 
 /**
  * The categorical palette, as slot names. Tags store one of these rather than a
- * hex so each theme can resolve its own step (see --series-* in globals.scss) —
- * a colour readable on the dark card is not readable on white.
+ * hex so the shared palette defines every color (see --series-* in globals.scss).
  *
  * Fixed order, assigned in sequence. A ninth tag reuses a slot; hues are never
  * generated, because a generated hue lands wherever it likes relative to the
@@ -68,7 +67,7 @@ export const TAG_SLOTS = [
 
 export type TagSlot = (typeof TAG_SLOTS)[number];
 
-/** Resolve a stored slot to the current theme's step. */
+/** Resolve a stored slot to the shared palette color. */
 export function slotColor(slot: string | null | undefined): string {
   return slot && (TAG_SLOTS as readonly string[]).includes(slot)
     ? `var(--series-${slot})`

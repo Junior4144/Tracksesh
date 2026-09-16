@@ -132,7 +132,7 @@ the demo button will fail.
 | `npm test` | Vitest suite (pure logic, jsdom) |
 | `npm run e2e` | Playwright layout checks in a real browser |
 | `npm run e2e:shots` | Screenshots → `test-results/screens/` |
-| `npm run test:ui` | Deterministic presentation and interaction checks at three widths, in both themes; no database required |
+| `npm run test:ui` | Deterministic presentation and interaction checks at three widths, with a single neutral palette; no database required |
 | `npm run setup:demo` | Creates the demo account if missing (idempotent) |
 | `npm run test:api` | RLS isolation tests against a real Postgres |
 | `npm run test:csp` | Drives a production build, fails on any CSP violation |
@@ -148,7 +148,7 @@ starts *both* servers itself, in order, because a run with only the SPA up would
 render every page with its data requests failing and report that as a layout
 problem.
 
-`e2e:shots` captures every page in both themes at all three widths — the fastest
+`e2e:shots` captures every page at all three widths — the fastest
 way to see the effect of a style change.
 
 The visual system and migration acceptance criteria are in
@@ -365,7 +365,6 @@ src/
     LoginPage RegisterPage ForgotPasswordPage
   components/
     AuthProvider.tsx     Supabase auth: session, password reset, deletion
-    ThemeProvider.tsx    dark/light via <html data-theme>
     TimerProvider.tsx    the session timer; above the routes so it survives navigation
     ConfirmDialog.tsx    the gate in front of anything with no undo
     PasswordInput.tsx    password field with a show/hide toggle
@@ -536,9 +535,8 @@ every picker while the blocks that reference it keep its name and colour;
 deleting sets `tag_id` to null on all of them, which is not reversible — so the
 delete confirmation counts the blocks first (`tag_usage()`).
 
-`tags.color` holds a palette **slot** (`blue`, `orange`, …), not a hex — each
-theme resolves its own step via `--series-*` in `globals.scss`, because a colour
-readable on the dark card isn't readable on white.
+`tags.color` holds a palette **slot** (`blue`, `orange`, …), not a hex — the
+neutral palette resolves each slot via `--series-*` in `globals.scss`.
 
 The running stopwatch is a database row, not client state, so a refresh or a
 closed laptop can't lose it. A partial unique index enforces at most one running

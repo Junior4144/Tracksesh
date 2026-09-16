@@ -104,18 +104,6 @@ async function fixture(page: Page) {
   await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeEnabled();
 }
 
-async function theme(page: Page, value: string) {
-  if ((await page.locator('html').getAttribute('data-theme')) === value) return;
-  const toggle = page.getByRole('button', { name: /Switch to .* mode/ });
-  const menu = page.getByRole('button', { name: 'Toggle navigation' });
-  if (!(await toggle.isVisible())) await menu.click();
-  await toggle.click();
-  if ((await menu.isVisible()) && (await menu.getAttribute('aria-expanded')) === 'true')
-    await menu.click();
-  // Theme changes transition button colors; settle them before measuring contrast/capturing.
-  await page.evaluate(() => document.getAnimations().forEach((animation) => animation.finish()));
-}
-
 async function noOverflow(page: Page) {
   expect(
     await page.evaluate(
@@ -124,7 +112,7 @@ async function noOverflow(page: Page) {
   ).toBeLessThanOrEqual(1);
 }
 
-test('all workspaces share responsive light and dark presentation', async ({ page }, info) => {
+test('all workspaces share responsive neutral presentation', async ({ page }, info) => {
   await fixture(page);
   await page.getByRole('link', { name: 'Tracksesh', exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
@@ -132,8 +120,7 @@ test('all workspaces share responsive light and dark presentation', async ({ pag
     'href',
     '/dashboard',
   );
-  for (const mode of ['light', 'dark']) {
-    await theme(page, mode);
+  for (const mode of ['neutral']) {
     for (const path of [
       '',
       'dashboard',
@@ -219,11 +206,14 @@ test('empty and error states remain distinct', async ({ page }) => {
 });
 
 test('authentication screens use the same compact layout', async ({ page }, info) => {
-  for (const mode of ['light', 'dark']) {
+  for (const mode of ['dark', 'light'] as const) {
+    await page.emulateMedia({ colorScheme: mode });
+    await page.addInitScript((saved) => localStorage.setItem('tracksesh_theme', saved), mode);
     for (const path of ['', 'login', 'register', 'forgot-password', 'auth/link-expired']) {
       await page.goto(`/${path}`);
-      await theme(page, mode);
       await expect(page.locator('main h1')).toBeVisible();
+      await expect(page.getByRole('button', { name: /switch to .* mode/i })).toHaveCount(0);
+      await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(214, 215, 206)');
       if (path === '') {
         await expect(
           page.locator('main').getByRole('link', { name: 'Get started' }),

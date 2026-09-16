@@ -1,5 +1,20 @@
 # Visual system specification
 
+## Single neutral appearance (supersedes the two-theme tokens below)
+
+Use one warm stone canvas (#d6d7ce), ivory surfaces (#e7e8df), charcoal text
+(#27332c), and muted teal actions (#2c6553). Categorical marks use darker,
+restrained colors with textual labels. Remove the switch, provider, theme boot
+script and theme selectors. Browser controls use a fixed light color scheme.
+Old saved preferences and OS appearance must not alter the palette. Verify the
+same presentation under both system preferences. Do not commit this change.
+
+Validation: typecheck, lint, 78 unit tests, frontend and .NET builds, all 15
+responsive browser checks, and five mobile checks against the production server
+passed. Desktop and mobile screenshots were inspected. API integration tests
+and live-auth CSP navigation remain blocked by unavailable local Supabase;
+the production login page loaded the neutral stylesheet successfully.
+
 ## Home page addition
 
 The root `/` is a public product introduction instead of a redirect. It explains
