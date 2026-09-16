@@ -1,10 +1,12 @@
+import { TagPicker } from '@/components/ui/TagPicker';
+import { Dialog } from '@/components/ui/Dialog';
 import { useEffect, useRef, useState } from 'react';
 import { ApiError } from '@/lib/api';
 import { createTag, fetchTags } from '@/lib/blocks';
 import { nextSlot } from '@/lib/edits';
 import { blockDuration, formatClock, formatTotal } from '@/lib/time';
-import { slotColor, type Tag, type TimeBlock } from '@/lib/types';
-import { CheckSmallIcon, TagIcon, TrashIcon } from '@/components/icons';
+import { type Tag, type TimeBlock } from '@/lib/types';
+import { TagIcon, TrashIcon } from '@/components/icons';
 
 /**
  * "What did you do in this time?" — shown once the stopwatch stops.
@@ -45,13 +47,6 @@ export function SessionLabelPrompt({
   }, []);
 
   // Esc keeps the block rather than discarding it — the safe default.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onDismiss();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onDismiss]);
 
   // The block is already stopped, so its duration is fixed — no clock needed.
   const worked = blockDuration(block);
@@ -78,113 +73,107 @@ export function SessionLabelPrompt({
   }
 
   return (
-    <div className="label-prompt-backdrop" role="dialog" aria-modal="true" aria-labelledby="labelPromptTitle">
-      <div className="label-prompt card-surface">
-        <div className="text-center mb-3">
-          <p className="text-muted small text-uppercase letter-spacing mb-1">Session complete</p>
-          <h3 id="labelPromptTitle" className="fw-bold mb-1">
-            What did you do?
-          </h3>
-          <p className="text-muted small mb-0">
-            {formatTotal(worked)} · {formatClock(block.started_at)}
-            {block.ended_at ? `–${formatClock(block.ended_at)}` : ''}
-          </p>
-        </div>
-
-        <div className="mb-3">
-          <label className="form-label small text-muted d-flex align-items-center gap-1">
-            <TagIcon size={12} />
-            Tag
-          </label>
-
-          <div className="tag-picker d-flex flex-wrap gap-2">
-            {tags.map((tag) => (
-              <button
-                key={tag.id}
-                type="button"
-                className={`tag-chip${selected === tag.id ? ' selected' : ''}`}
-                style={{ '--tag-color': slotColor(tag.color) } as React.CSSProperties}
-                onClick={() => setSelected(selected === tag.id ? null : tag.id)}
-              >
-                <span className="tag-dot" />
-                {tag.name}
-                {selected === tag.id && <CheckSmallIcon className="ms-1" size={11} />}
-              </button>
-            ))}
-
-            {creating ? (
-              <span className="tag-create d-inline-flex align-items-center gap-1">
-                <input
-                  className="form-control form-control-sm tag-create-input"
-                  value={newTagName}
-                  onChange={(e) => setNewTagName(e.target.value)}
-                  placeholder="Tag name"
-                  maxLength={40}
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      addTag();
-                    }
-                    if (e.key === 'Escape') {
-                      e.stopPropagation();
-                      setCreating(false);
-                    }
-                  }}
-                />
-                <button type="button" className="btn btn-accent btn-sm" onClick={addTag}>
-                  Add
-                </button>
-              </span>
-            ) : (
-              <button type="button" className="tag-chip tag-chip-new" onClick={() => setCreating(true)}>
-                + New tag
-              </button>
-            )}
-          </div>
-
-          {tagError && <p className="text-danger small mt-2 mb-0">{tagError}</p>}
-        </div>
-
-        <div className="mb-4">
-          <label htmlFor="sessionNote" className="form-label small text-muted">
-            Note <span className="text-muted">(optional)</span>
-          </label>
-          <input
-            id="sessionNote"
-            ref={noteRef}
-            className="form-control"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="e.g. Chapter 3, distributed systems"
-            maxLength={500}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') onSave(selected, note);
-            }}
-          />
-        </div>
-
-        <div className="d-flex gap-2 align-items-center">
-          <button
-            className="btn btn-accent fw-semibold flex-grow-1"
-            onClick={() => onSave(selected, note)}
-            disabled={busy}
-          >
-            Save to my day
-          </button>
-          <button className="btn btn-ghost" onClick={onDismiss} disabled={busy} title="Keep it, label it later">
-            Skip
-          </button>
-          <button
-            className="btn btn-ghost text-danger"
-            onClick={onDiscard}
-            disabled={busy}
-            title="Delete this session"
-          >
-            <TrashIcon size={15} />
-          </button>
-        </div>
+    <Dialog labelledBy="labelPromptTitle" onDismiss={onDismiss} busy={busy}>
+      <div className="text-center mb-3">
+        <p className="text-muted small text-uppercase letter-spacing mb-1">Session complete</p>
+        <h3 id="labelPromptTitle" className="fw-bold mb-1">
+          What did you do?
+        </h3>
+        <p className="text-muted small mb-0">
+          {formatTotal(worked)} · {formatClock(block.started_at)}
+          {block.ended_at ? `–${formatClock(block.ended_at)}` : ''}
+        </p>
       </div>
-    </div>
+
+      <div className="mb-3">
+        <label className="form-label small text-muted d-flex align-items-center gap-1">
+          <TagIcon size={12} />
+          Tag
+        </label>
+
+        <TagPicker tags={tags} value={selected} onChange={setSelected}>
+          {creating ? (
+            <span className="tag-create d-inline-flex align-items-center gap-1">
+              <input
+                className="form-control form-control-sm tag-create-input"
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                placeholder="Tag name"
+                maxLength={40}
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addTag();
+                  }
+                  if (e.key === 'Escape') {
+                    e.stopPropagation();
+                    setCreating(false);
+                  }
+                }}
+              />
+              <button type="button" className="btn btn-accent btn-sm" onClick={addTag}>
+                Add
+              </button>
+            </span>
+          ) : (
+            <button
+              type="button"
+              className="tag-chip tag-chip-new"
+              onClick={() => setCreating(true)}
+            >
+              + New tag
+            </button>
+          )}
+        </TagPicker>
+
+        {tagError && <p className="text-danger small mt-2 mb-0">{tagError}</p>}
+      </div>
+
+      <div className="mb-4">
+        <label htmlFor="sessionNote" className="form-label small text-muted">
+          Note <span className="text-muted">(optional)</span>
+        </label>
+        <input
+          id="sessionNote"
+          ref={noteRef}
+          className="form-control"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="e.g. Chapter 3, distributed systems"
+          maxLength={500}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') onSave(selected, note);
+          }}
+        />
+      </div>
+
+      <div className="d-flex gap-2 align-items-center">
+        <button
+          className="btn btn-accent fw-semibold flex-grow-1"
+          onClick={() => onSave(selected, note)}
+          disabled={busy}
+        >
+          Save to my day
+        </button>
+        <button
+          className="btn btn-ghost"
+          onClick={onDismiss}
+          disabled={busy}
+          title="Keep it, label it later"
+        >
+          Skip
+        </button>
+        <button
+          className="btn btn-ghost text-danger"
+          onClick={onDiscard}
+          disabled={busy}
+          title="Delete this session"
+          aria-label="Delete this session"
+        >
+          <TrashIcon size={15} />
+        </button>
+      </div>
+    </Dialog>
   );
 }

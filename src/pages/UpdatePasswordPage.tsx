@@ -1,9 +1,10 @@
+import { AuthLayout } from '@/components/ui/AuthLayout';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/components/AuthProvider';
 import { PasswordInput } from '@/components/PasswordInput';
-import { AlertIcon, BrandMark } from '@/components/icons';
+import { AlertIcon } from '@/components/icons';
 
 interface UpdateForm {
   password: string;
@@ -56,65 +57,60 @@ export default function UpdatePasswordPage() {
     isSubmitted || touchedFields[field] ? errors[field]?.message : undefined;
 
   return (
-    <div className="auth-page d-flex align-items-center justify-content-center min-vh-100">
-      <div className="auth-card card shadow-lg p-4 p-md-5">
-        <div className="text-center mb-4">
-          <div className="brand-icon mb-3">
-            <BrandMark size={48} />
-          </div>
-          <h1 className="h3 fw-bold text-brand">Choose a new password</h1>
-          <p className="text-muted mb-0">You&apos;ll be signed in once it&apos;s saved.</p>
-        </div>
-
-        {error && (
-          <div className="alert alert-danger py-2 d-flex align-items-center gap-2" role="alert">
-            <AlertIcon size={16} />
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit(submit)} noValidate>
-          <PasswordInput
-            id="password"
-            label="New password"
-            placeholder="Min. 8 characters"
-            autoComplete="new-password"
-            autoFocus
-            error={shown('password')}
-            {...register('password', {
-              required: 'Password is required.',
-              minLength: { value: 8, message: 'Password must be at least 8 characters.' },
-            })}
-          />
-
-          <PasswordInput
-            id="confirmPassword"
-            label="Confirm new password"
-            placeholder="Repeat password"
-            autoComplete="new-password"
-            error={shown('confirmPassword')}
-            {...register('confirmPassword', {
-              required: 'Please confirm your password.',
-              validate: (value) => value === getValues('password') || 'Passwords do not match.',
-            })}
-          />
-
-          <button
-            type="submit"
-            className="btn btn-accent w-100 fw-semibold py-2 mt-2"
-            disabled={loading}
-          >
-            {loading ? (
-              <>
-                <span className="spinner-border spinner-border-sm me-2" role="status" />
-                Saving…
-              </>
-            ) : (
-              'Save new password'
-            )}
-          </button>
-        </form>
+    <AuthLayout>
+      <div className="auth-heading">
+        <h1 className="auth-title">Choose a new password</h1>
+        <p className="text-muted mb-0">You&apos;ll be signed in once it&apos;s saved.</p>
       </div>
-    </div>
+
+      {error && (
+        <div className="alert alert-danger py-2 d-flex align-items-center gap-2" role="alert">
+          <AlertIcon size={16} />
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit(submit)} noValidate>
+        <PasswordInput
+          id="password"
+          label="New password"
+          placeholder="Min. 8 characters"
+          autoComplete="new-password"
+          autoFocus
+          error={shown('password')}
+          {...register('password', {
+            required: 'Password is required.',
+            minLength: { value: 8, message: 'Password must be at least 8 characters.' },
+          })}
+        />
+
+        <PasswordInput
+          id="confirmPassword"
+          label="Confirm new password"
+          placeholder="Repeat password"
+          autoComplete="new-password"
+          error={shown('confirmPassword')}
+          {...register('confirmPassword', {
+            required: 'Please confirm your password.',
+            validate: (value) => value === getValues('password') || 'Passwords do not match.',
+          })}
+        />
+
+        <button
+          type="submit"
+          className="btn btn-accent w-100 fw-semibold py-2 mt-2"
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <span className="spinner-border spinner-border-sm me-2" role="status" />
+              Saving…
+            </>
+          ) : (
+            'Save new password'
+          )}
+        </button>
+      </form>
+    </AuthLayout>
   );
 }

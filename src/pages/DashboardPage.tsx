@@ -1,219 +1,149 @@
-import { useCallback, useEffect, useState } from 'react';
+﻿import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { useAuth } from '@/components/AuthProvider';
 import { useTimer } from '@/components/TimerProvider';
 import { SessionLabelPrompt } from '@/components/SessionLabelPrompt';
 import { HowItWorks } from '@/components/panels/HowItWorks';
+import { Page, PageHeader, StateMessage } from '@/components/ui/Page';
 import { fetchRecentBlocks } from '@/lib/blocks';
 import { blockDuration, formatClock, formatTotal } from '@/lib/time';
 import { slotColor, type TimeBlockWithTag } from '@/lib/types';
-import {
-  AlertIcon,
-  PauseIcon,
-  PlayIcon,
-  StopIcon,
-} from '@/components/icons';
+import { PauseIcon, PlayIcon, StopIcon } from '@/components/icons';
 
-const RADIUS = 120;
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-const SVG_SIZE = RADIUS * 2 + 40;
-
-const STATE_LABEL = {
-  idle: 'Ready when you are',
-  running: 'Tracking',
-  paused: 'Paused',
-} as const;
-
-const RING_CLASS = {
-  idle: 'ring-idle',
-  running: 'ring-running',
-  paused: 'ring-paused',
-} as const;
+const STATE_LABEL = { idle: 'Ready when you are', running: 'Tracking', paused: 'Paused' } as const;
 
 export default function DashboardPage() {
   const timer = useTimer();
   const { displayName } = useAuth();
-
   const [recent, setRecent] = useState<TimeBlockWithTag[]>([]);
-
+  const [recentState, setRecentState] = useState<'loading' | 'ready' | 'error'>('loading');
   const loadRecent = useCallback(() => {
     fetchRecentBlocks()
-      .then(setRecent)
-      .catch(() => {
-        // Non-essential panel; the timer still works without it.
-      });
+      .then((rows) => {
+        setRecent(rows);
+        setRecentState('ready');
+      })
+      .catch(() => setRecentState('error'));
   }, []);
-
-  // Refresh the list whenever a session finishes being dealt with.
   useEffect(() => {
     if (!timer.pending) loadRecent();
   }, [timer.pending, loadRecent]);
-
-  const ringClass = RING_CLASS[timer.status];
-  const strokeDashoffset = CIRCUMFERENCE * (1 - timer.progress);
   const isIdle = timer.status === 'idle';
 
   return (
-    <div className="dashboard d-flex flex-column min-vh-100">
-      <div className="dashboard-header text-center pt-5 pb-2">
-        <p className="text-muted mb-1 small text-uppercase letter-spacing">Welcome back</p>
-        <h2 className="fw-bold mb-0">{displayName}</h2>
-      </div>
-
-      {/*
-        Three columns on a wide screen: the timer stays optically centred while
-        the explainer and the recent list fill the gutters that were empty.
-        Source order is centre-first, so the narrow single-column stack still
-        leads with the timer — the sides are placed by grid-column, not order.
-      */}
-      <main className="dashboard-layout flex-grow-1">
-        <div className="dash-center d-flex flex-column align-items-center gap-4">
-          <p className={`state-label fw-semibold mb-0 ${ringClass}`}>{STATE_LABEL[timer.status]}</p>
-
-        <div className={`timer-ring-wrapper position-relative${timer.status === 'running' ? ' pulse' : ''}`}>
-          <svg
-            className="timer-svg"
-            width={SVG_SIZE}
-            height={SVG_SIZE}
-            viewBox={`0 0 ${SVG_SIZE} ${SVG_SIZE}`}
-            aria-hidden="true"
-          >
-            <circle
-              className="ring-track"
-              cx={RADIUS + 20}
-              cy={RADIUS + 20}
-              r={RADIUS}
-              fill="none"
-              strokeWidth="10"
-            />
-            <circle
-              className={`ring-progress ${ringClass}`}
-              cx={RADIUS + 20}
-              cy={RADIUS + 20}
-              r={RADIUS}
-              fill="none"
-              strokeWidth="10"
-              strokeLinecap="round"
-              strokeDasharray={CIRCUMFERENCE}
-              strokeDashoffset={strokeDashoffset}
-              style={{
-                transform: 'rotate(-90deg)',
-                transformBox: 'fill-box',
-                transformOrigin: 'center',
-              }}
-            />
-          </svg>
-
-          <div className="timer-center position-absolute top-50 start-50 translate-middle text-center">
-            <div className="timer-display">{timer.displayTime}</div>
-            <div className="timer-sub text-muted small">
-              {isIdle
-                ? 'Press start when you begin'
-                : timer.block
-                  ? `Started ${formatClock(timer.block.started_at)}`
-                  : ''}
-            </div>
+    <Page className="dashboard">
+      <PageHeader title="Timer" description={`Welcome back, ${displayName}. Take your time.`}>
+        <Link to="/activity?add=1" className="btn btn-ghost">
+          Add time manually
+        </Link>
+      </PageHeader>
+      <div className="dashboard-layout">
+        <section className={`timer-workspace timer-${timer.status}`} aria-label="Stopwatch">
+          <div className="timer-workspace-heading">
+            <h2 className="section-title">Current session</h2>
+            <span className="state-label" role="status">
+              <span className="status-dot" />
+              {timer.ready ? STATE_LABEL[timer.status] : 'Connecting…'}
+            </span>
           </div>
-        </div>
-
-        <div className="timer-controls d-flex gap-3 align-items-center">
-          {isIdle && (
-            <button
-              className="btn btn-accent btn-lg px-5 fw-semibold"
-              onClick={timer.start}
-              disabled={timer.busy || !timer.ready}
-            >
-              <PlayIcon className="me-2" size={18} />
-              Start
-            </button>
-          )}
-
-          {timer.status === 'running' && (
-            <>
-              <button
-                className="btn btn-outline-accent px-4 fw-semibold"
-                onClick={timer.pause}
-                disabled={timer.busy}
-              >
-                <PauseIcon className="me-2" size={18} />
-                Pause
-              </button>
-              <button
-                className="btn btn-stop px-4 fw-semibold"
-                onClick={timer.stop}
-                disabled={timer.busy}
-              >
-                <StopIcon className="me-2" size={16} />
-                Stop
-              </button>
-            </>
-          )}
-
-          {timer.status === 'paused' && (
-            <>
-              <button
-                className="btn btn-accent btn-lg px-5 fw-semibold"
-                onClick={timer.resume}
-                disabled={timer.busy}
-              >
-                <PlayIcon className="me-2" size={18} />
-                Resume
-              </button>
-              <button
-                className="btn btn-stop px-4 fw-semibold"
-                onClick={timer.stop}
-                disabled={timer.busy}
-              >
-                <StopIcon className="me-2" size={16} />
-                Stop
-              </button>
-            </>
-          )}
-        </div>
-
-          {timer.error && (
-            <div className="timer-error d-flex align-items-center gap-2">
-              <AlertIcon size={14} />
-              {timer.error}
+          <div className="timer-readout">
+            <div className="timer-display" aria-label={`Elapsed time ${timer.displayTime}`}>
+              {timer.displayTime}
             </div>
+            <p className="timer-sub">
+              {isIdle
+                ? 'Start the clock when you begin.'
+                : timer.block
+                  ? `Started at ${formatClock(timer.block.started_at)}`
+                  : ''}
+            </p>
+          </div>
+          <div className="timer-controls">
+            {isIdle ? (
+              <button
+                className="btn btn-accent"
+                onClick={timer.start}
+                disabled={timer.busy || !timer.ready}
+              >
+                <PlayIcon size={16} />
+                Start
+              </button>
+            ) : (
+              <>
+                <button
+                  className="btn btn-accent"
+                  onClick={timer.status === 'running' ? timer.pause : timer.resume}
+                  disabled={timer.busy}
+                >
+                  {timer.status === 'running' ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
+                  {timer.status === 'running' ? 'Pause' : 'Resume'}
+                </button>
+                <button className="btn btn-ghost" onClick={timer.stop} disabled={timer.busy}>
+                  <StopIcon size={14} />
+                  Stop
+                </button>
+              </>
+            )}
+          </div>
+          {timer.error && (
+            <p className="timer-error" role="alert">
+              {timer.error}
+            </p>
           )}
-
-          {/* Inside the centre column, not a row beneath the whole grid — so a
-              long panel in the left column can never push this down. */}
-          {recent.length > 0 && (
-            <section className="recent-blocks">
-              <h3 className="recent-title text-muted small text-uppercase letter-spacing mb-2">
-                Recent
-              </h3>
-              <ul className="list-unstyled mb-0">
-                {recent.map((b) => (
-                  <li key={b.id} className="recent-row d-flex align-items-center gap-2">
-                    <span className="recent-dot" style={{ background: slotColor(b.tag?.color) }} />
-                    <span className="recent-name flex-grow-1 text-truncate">
-                      {b.tag?.name ?? <span className="text-muted fst-italic">Unlabelled</span>}
-                      {b.note && <span className="text-muted small ms-2">{b.note}</span>}
+          <p className="timer-footnote">
+            {isIdle
+              ? 'No targets. No countdown. Just your time.'
+              : 'Paused time is excluded. Label your session when you stop.'}
+          </p>
+        </section>
+        <section className="recent-blocks" aria-labelledby="recent-title">
+          <div className="section-heading">
+            <h2 id="recent-title" className="section-title">
+              Recent sessions
+            </h2>
+            <Link to="/activity" className="link-accent small">
+              View activity →
+            </Link>
+          </div>
+          {recentState === 'loading' ? (
+            <StateMessage title="Loading recent sessions…" />
+          ) : recentState === 'error' ? (
+            <StateMessage title="Recent sessions couldn’t load" error>
+              <button className="btn btn-ghost mt-2" onClick={loadRecent}>
+                Try again
+              </button>
+            </StateMessage>
+          ) : recent.length === 0 ? (
+            <StateMessage title="Your ledger starts here">
+              Finish a session and give it a tag. It will appear here.
+            </StateMessage>
+          ) : (
+            <ul className="list-unstyled recent-list">
+              {recent.map((b) => (
+                <li key={b.id} className="recent-row">
+                  <span className="recent-dot" style={{ background: slotColor(b.tag?.color) }} />
+                  <div className="recent-detail">
+                    <span className="recent-name">{b.tag?.name ?? 'Unlabelled'}</span>
+                    <span className="recent-note">{b.note || formatClock(b.started_at)}</span>
+                  </div>
+                  <div className="recent-numbers">
+                    <span className="recent-total">{formatTotal(blockDuration(b))}</span>
+                    <span className="recent-time">
+                      {new Date(b.started_at).toLocaleDateString([], {
+                        month: 'short',
+                        day: 'numeric',
+                      })}
                     </span>
-                    <span className="recent-time text-muted small">
-                      {formatClock(b.started_at)}
-                    </span>
-                    <span className="recent-total fw-semibold small">
-                      {formatTotal(blockDuration(b))}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <Link to="/activity" className="recent-more link-accent">
-                See all activity →
-              </Link>
-            </section>
+                  </div>
+                </li>
+              ))}
+            </ul>
           )}
-        </div>
-
-        <aside className="dash-side dash-side-left">
-          <HowItWorks />
-        </aside>
-      </main>
-
+        </section>
+      </div>
+      <aside className="dashboard-guide">
+        <HowItWorks />
+      </aside>
       {timer.pending && (
         <SessionLabelPrompt
           block={timer.pending}
@@ -223,6 +153,6 @@ export default function DashboardPage() {
           onDismiss={timer.dismissPending}
         />
       )}
-    </div>
+    </Page>
   );
 }

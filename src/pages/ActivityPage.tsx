@@ -1,3 +1,5 @@
+import { Page, PageHeader, StateMessage } from '@/components/ui/Page';
+import { useSearchParams } from 'react-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { TagTotals } from '@/components/activity/TagTotals';
@@ -23,13 +25,15 @@ const MODES: { key: RangeMode; label: string }[] = [
 const STEP_DAYS: Record<RangeMode, number> = { day: 1, week: 7, month: 30 };
 
 export default function ActivityPage() {
+  const [searchParams] = useSearchParams();
   const [mode, setMode] = useState<RangeMode>('week');
   /** Days away from today; the "Today" button resets it to 0. */
   const [offsetDays, setOffsetDays] = useState(0);
   const [blocks, setBlocks] = useState<TimeBlockWithTag[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
-  const [adding, setAdding] = useState(false);
-  const [showTable, setShowTable] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [adding, setAdding] = useState(() => searchParams.get('add') === '1');
+  const [showTable, setShowTable] = useState(true);
   /** The block open in the edit dialog, and the one queued for deletion. */
   const [editing, setEditing] = useState<TimeBlockWithTag | null>(null);
   const [pendingDelete, setPendingDelete] = useState<TimeBlockWithTag | null>(null);
@@ -44,7 +48,7 @@ export default function ActivityPage() {
 
   const anchor = useMemo(
     () => (nowMs === 0 ? null : addDays(new Date(nowMs), offsetDays)),
-    [nowMs, offsetDays]
+    [nowMs, offsetDays],
   );
   const range = useMemo(() => (anchor ? rangeFor(mode, anchor) : null), [mode, anchor]);
 
@@ -63,11 +67,15 @@ export default function ActivityPage() {
     Promise.all([fetchBlocksInRange(range.from, range.to), fetchTags()])
       .then(([rows, tagRows]) => {
         if (cancelled) return;
+        setLoadError(false);
         setBlocks(rows);
         setTags(tagRows);
       })
       .catch(() => {
-        if (!cancelled) setBlocks([]);
+        if (!cancelled) {
+          setBlocks([]);
+          setLoadError(true);
+        }
       })
       .finally(() => {
         if (!cancelled) setLoadedKey(rangeKey);
@@ -84,7 +92,7 @@ export default function ActivityPage() {
 
   const summary = useMemo(
     () => (range ? summarise(blocks, range.from, range.to) : null),
-    [blocks, range]
+    [blocks, range],
   );
 
   async function confirmRemove() {
@@ -114,20 +122,24 @@ export default function ActivityPage() {
   };
 
   if (!anchor || !range || !summary) {
-    return <div className="activity container-sm py-5 text-muted">Loading…</div>;
+    return (
+      <Page>
+        <StateMessage title="Loading…" />
+      </Page>
+    );
   }
 
   const isEmpty = summary.totalSeconds === 0;
 
   return (
-    <div className="activity container-sm py-4">
-      <header className="d-flex flex-wrap align-items-center gap-2 mb-4">
-        <div className="flex-grow-1">
-          <h1 className="h4 fw-bold mb-0">Activity</h1>
-          <p className="text-muted small mb-0">{rangeLabel()}</p>
-        </div>
-
-        {/* Filters in one row above the charts. */}
+    <Page className="activity-page">
+      <PageHeader title="Activity" description="See where your hours went.">
+        <button className="btn btn-accent" onClick={() => setAdding((a) => !a)}>
+          + Add time
+        </button>
+      </PageHeader>
+      <div className="toolbar">
+        <p className="range-label mb-0 me-auto">{rangeLabel()}</p>
         <div className="btn-group btn-group-sm range-picker" role="group" aria-label="Range">
           {MODES.map((m) => (
             <button
@@ -153,11 +165,7 @@ export default function ActivityPage() {
             ›
           </button>
         </div>
-
-        <button className="btn btn-accent btn-sm fw-semibold" onClick={() => setAdding((a) => !a)}>
-          + Add time
-        </button>
-      </header>
+      </div>
 
       {adding && (
         <div className="mb-4">
@@ -174,7 +182,13 @@ export default function ActivityPage() {
       )}
 
       {loading ? (
-        <p className="text-muted">Loading…</p>
+        <StateMessage title="Loading activity…" />
+      ) : loadError ? (
+        <StateMessage title="Activity couldn’t load" error>
+          <button className="btn btn-ghost mt-2" onClick={reload}>
+            Try again
+          </button>
+        </StateMessage>
       ) : isEmpty ? (
         <div className="empty-state text-center py-5">
           <BarChartIcon size={28} className="text-muted mb-2" />
@@ -194,16 +208,16 @@ export default function ActivityPage() {
           </div>
 
           <div className="chart-grid">
-            <div className="card-surface chart-card">
+            <div className="chart-card">
               <TagTotals totals={summary.byTag} />
             </div>
 
             {mode === 'day' ? (
-              <div className="card-surface chart-card">
+              <div className="chart-card">
                 <DayStrip day={range.from} blocks={blocks} onSelect={setEditing} />
               </div>
             ) : (
-              <div className="card-surface chart-card">
+              <div className="chart-card">
                 <DailyTrend days={summary.byDay} legend={summary.byTag} />
               </div>
             )}
@@ -220,8 +234,16 @@ export default function ActivityPage() {
           </div>
 
           {showTable && (
-            <div className="card-surface session-card">
-              <div className="table-responsive">
+            <div className="session-card">
+              <p className="table-scroll-hint text-muted small">
+                Scroll across to see notes and session actions.
+              </p>
+              <div
+                className="table-responsive"
+                tabIndex={0}
+                role="region"
+                aria-label="Sessions table"
+              >
                 <table className="table table-sm table-hover session-table">
                   <thead>
                     <tr>
@@ -307,10 +329,9 @@ export default function ActivityPage() {
           title="Delete this block?"
           body={
             <>
-              {pendingDelete.tag?.name ?? 'Unlabelled'} ·{' '}
-              {formatClock(pendingDelete.started_at)}–{formatClock(pendingDelete.ended_at!)} ·{' '}
-              {formatTotal(blockDuration(pendingDelete))}. This removes the time from your
-              totals for good.
+              {pendingDelete.tag?.name ?? 'Unlabelled'} · {formatClock(pendingDelete.started_at)}–
+              {formatClock(pendingDelete.ended_at!)} · {formatTotal(blockDuration(pendingDelete))}.
+              This removes the time from your totals for good.
             </>
           }
           confirmLabel="Delete block"
@@ -319,7 +340,7 @@ export default function ActivityPage() {
           onCancel={() => setPendingDelete(null)}
         />
       )}
-    </div>
+    </Page>
   );
 }
 

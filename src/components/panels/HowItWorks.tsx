@@ -1,6 +1,5 @@
 import { Link } from 'react-router';
 import { InfoPanel, PanelSteps } from './InfoPanel';
-import { LightbulbIcon } from '@/components/icons';
 
 /**
  * The stopwatch explainer. Content only — the closeable behaviour lives in
@@ -15,7 +14,6 @@ export function HowItWorks() {
       id="how-it-works"
       title="A ledger, not a focus timer"
       subtitle="The point isn’t finishing a session — it’s knowing where the hours went."
-      icon={<LightbulbIcon size={16} />}
       collapsedLabel="How Tracksesh works"
     >
       <PanelSteps

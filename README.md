@@ -132,6 +132,7 @@ the demo button will fail.
 | `npm test` | Vitest suite (pure logic, jsdom) |
 | `npm run e2e` | Playwright layout checks in a real browser |
 | `npm run e2e:shots` | Screenshots → `test-results/screens/` |
+| `npm run test:ui` | Deterministic presentation and interaction checks at three widths, in both themes; no database required |
 | `npm run setup:demo` | Creates the demo account if missing (idempotent) |
 | `npm run test:api` | RLS isolation tests against a real Postgres |
 | `npm run test:csp` | Drives a production build, fails on any CSP violation |
@@ -149,6 +150,15 @@ problem.
 
 `e2e:shots` captures every page in both themes at all three widths — the fastest
 way to see the effect of a style change.
+
+The visual system and migration acceptance criteria are in
+[docs/VISUAL-SYSTEM.md](docs/VISUAL-SYSTEM.md). `test:ui` uses browser network
+fixtures (including auth) to check layout and interactions without changing a
+real account. It captures screenshots under `test-results/ui/`. This complements,
+and does not replace, the live API isolation and authentication checks.
+Set `UI_BASE_URL=http://localhost:5251` after a production build to exercise the
+same presentation checks under the API's CSP. Run one viewport project per minute
+against that server: its global rate limiter also counts static asset requests.
 
 `test:api` needs the database up (`supabase start`) and creates two throwaway
 users, cleaning up after itself. It builds into `obj/test-bin/` rather than the

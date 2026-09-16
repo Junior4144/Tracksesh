@@ -1,3 +1,4 @@
+import { Page, PageHeader, StateMessage } from '@/components/ui/Page';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/components/AuthProvider';
@@ -18,22 +19,28 @@ export default function AccountPage() {
   const { user, updatePassword, deleteAccount } = useAuth();
 
   if (!user) {
-    return <div className="account-page container-sm py-5 text-muted">Loading…</div>;
+    return (
+      <Page>
+        <StateMessage title="Loading…" />
+      </Page>
+    );
   }
 
   return (
-    <div className="account-page container-sm py-4">
-      <header className="mb-4">
-        <h1 className="h4 fw-bold mb-0">Account</h1>
-        <p className="text-muted small mb-0">
-          Signed in as <strong>{user.email}</strong>
-        </p>
-      </header>
+    <Page className="account-page">
+      <PageHeader
+        title="Account"
+        description={
+          <>
+            Signed in as <strong>{user.email}</strong>
+          </>
+        }
+      />
 
       <ChangePassword updatePassword={updatePassword} />
       <ExportData account={user} />
       <DeleteAccount email={user.email} deleteAccount={deleteAccount} />
-    </div>
+    </Page>
   );
 }
 
@@ -90,7 +97,7 @@ function ChangePassword({
     isSubmitted || touchedFields[field] ? errors[field]?.message : undefined;
 
   return (
-    <section className="card-surface account-card mb-3">
+    <section className="account-card mb-3">
       <h2 className="h6 fw-semibold mb-1">Change password</h2>
       <p className="text-muted small mb-3">
         You&apos;ll stay signed in on this device. Other devices keep their session until it
@@ -98,14 +105,20 @@ function ChangePassword({
       </p>
 
       {error && (
-        <div className="alert alert-danger py-2 px-3 small d-flex align-items-center gap-2" role="alert">
+        <div
+          className="alert alert-danger py-2 px-3 small d-flex align-items-center gap-2"
+          role="alert"
+        >
           <AlertIcon size={15} />
           {error}
         </div>
       )}
 
       {done && (
-        <div className="alert alert-success py-2 px-3 small d-flex align-items-center gap-2" role="alert">
+        <div
+          className="alert alert-success py-2 px-3 small d-flex align-items-center gap-2"
+          role="alert"
+        >
           <CheckCircleIcon size={15} />
           Password updated.
         </div>
@@ -168,7 +181,7 @@ function ExportData({ account }: { account: { id: string; email: string } }) {
 
       const payload = buildExport(account, tags, blocks, Date.now());
       const url = URL.createObjectURL(
-        new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+        new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }),
       );
 
       const link = document.createElement('a');
@@ -184,7 +197,7 @@ function ExportData({ account }: { account: { id: string; email: string } }) {
   }
 
   return (
-    <section className="card-surface account-card mb-3">
+    <section className="account-card mb-3">
       <h2 className="h6 fw-semibold mb-1">Export your data</h2>
       <p className="text-muted small mb-3">
         Every tag and every block, as JSON. Each block carries its tag name and worked duration, so
@@ -233,7 +246,7 @@ function DeleteAccount({
   }
 
   return (
-    <section className="card-surface account-card account-danger">
+    <section className="account-card account-danger">
       <h2 className="h6 fw-semibold mb-1 text-danger">Delete account</h2>
       <p className="text-muted small mb-3">
         Removes your account and every block and tag in it, immediately and permanently. There is no
@@ -241,7 +254,10 @@ function DeleteAccount({
       </p>
 
       {error && (
-        <div className="alert alert-danger py-2 px-3 small d-flex align-items-center gap-2" role="alert">
+        <div
+          className="alert alert-danger py-2 px-3 small d-flex align-items-center gap-2"
+          role="alert"
+        >
           <AlertIcon size={15} />
           {error}
         </div>

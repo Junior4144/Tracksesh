@@ -8,8 +8,6 @@ import { EyeIcon, EyeSlashIcon } from '@/components/icons';
  * its ref and spreads the rest of its props, so `{...register('password')}`
  * works exactly as it does on a plain input.
  *
- * `/login` and `/register` still have this inlined — they predate it and
- * rewriting working auth screens wasn't part of the job.
  */
 interface Props extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
   id: string;
@@ -19,7 +17,7 @@ interface Props extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'
 
 export const PasswordInput = forwardRef<HTMLInputElement, Props>(function PasswordInput(
   { id, label, error, ...props },
-  ref
+  ref,
 ) {
   const [visible, setVisible] = useState(false);
 
@@ -34,6 +32,8 @@ export const PasswordInput = forwardRef<HTMLInputElement, Props>(function Passwo
           ref={ref}
           type={visible ? 'text' : 'password'}
           className={`form-control${error ? ' is-invalid' : ''}`}
+          aria-invalid={!!error}
+          aria-describedby={error ? `${id}-error` : undefined}
           {...props}
         />
         <button
@@ -44,7 +44,11 @@ export const PasswordInput = forwardRef<HTMLInputElement, Props>(function Passwo
         >
           {visible ? <EyeSlashIcon size={16} /> : <EyeIcon size={16} />}
         </button>
-        {error && <div className="invalid-feedback">{error}</div>}
+        {error && (
+          <div id={`${id}-error`} className="invalid-feedback">
+            {error}
+          </div>
+        )}
       </div>
     </div>
   );

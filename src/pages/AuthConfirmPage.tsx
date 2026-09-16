@@ -1,8 +1,9 @@
+import { AuthLayout } from '@/components/ui/AuthLayout';
 import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import type { EmailOtpType } from '@supabase/supabase-js';
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase';
-import { BrandMark } from '@/components/icons';
+import {} from '@/components/icons';
 
 /**
  * Where every emailed auth link lands: sign-up confirmation, password recovery,
@@ -63,16 +64,11 @@ export default function AuthConfirmPage() {
   }, [searchParams, navigate]);
 
   return (
-    <div className="auth-page d-flex align-items-center justify-content-center min-vh-100">
-      <div className="auth-card card shadow-lg p-4 p-md-5 text-center">
-        <div className="brand-icon mb-3">
-          <BrandMark size={48} />
-        </div>
-        <p className="text-muted mb-0">
-          <span className="spinner-border spinner-border-sm me-2" role="status" />
-          Checking your link…
-        </p>
-      </div>
-    </div>
+    <AuthLayout>
+      <p className="text-muted mb-0">
+        <span className="spinner-border spinner-border-sm me-2" role="status" />
+        Checking your link…
+      </p>
+    </AuthLayout>
   );
 }
