@@ -10,6 +10,8 @@ import HomePage from '@/pages/HomePage';
 import ActivityPage from '@/pages/ActivityPage';
 import TagsPage from '@/pages/TagsPage';
 import AccountPage from '@/pages/AccountPage';
+import AdminPage from '@/pages/AdminPage';
+import TrafficPage from '@/pages/TrafficPage';
 import UpdatePasswordPage from '@/pages/UpdatePasswordPage';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
@@ -51,6 +53,8 @@ function AppRoutes() {
         <Route path="/activity" element={<ActivityPage />} />
         <Route path="/tags" element={<TagsPage />} />
         <Route path="/account" element={<AccountPage />} />
+        <Route path="/admin" element={<AdminPage />} />
+        <Route path="/admin/traffic" element={<TrafficPage />} />
         {/*
           The recovery page is auth-only and lives under /account on purpose.
           By the time someone reaches it, /auth/confirm has already turned their

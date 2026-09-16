@@ -1,5 +1,12 @@
 import { api, query } from './api';
 import type { Tag, TagUsage, TimeBlock, TimeBlockWithTag } from './types';
+import type { AdminOverview, MonitoredSite, TrafficFilters, TrafficReport } from './admin-types';
+
+export const fetchAdminAccess = () => api.get<{ is_admin: boolean }>('/admin/access');
+export const fetchAdminOverview = () => api.get<AdminOverview>('/admin/');
+export const fetchMonitoredSites = () => api.get<MonitoredSite[]>('/admin/sites');
+export const fetchTrafficReport = (filters: TrafficFilters) =>
+  api.get<TrafficReport>(`/admin/traffic${query({ ...filters })}`);
 
 /**
  * Data access for the ledger.

@@ -62,12 +62,17 @@ as production, where one process serves both.
 
 ### Configuring the browser half
 
-`.env`, read at build time and inlined into the bundle:
+Only `VITE_*` values from `.env` are read into the browser bundle:
 
 ```
 VITE_SUPABASE_URL=https://<project-ref>.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 ```
+
+The private [admin and traffic panels](docs/TRAFFIC.md) use server-only `.env`
+settings loaded by `npm run api`. `/account` links admins to `/admin`, then
+`/admin/traffic`. PostHog provides public origin request reports and Cloudflare
+provides domain edge analytics. Provider keys never use the `VITE_` prefix.
 
 Use the **publishable** key (`sb_publishable_…`), not a secret key — legacy
 `anon` keys are compatibility-only. Anything `VITE_*` ends up in the browser

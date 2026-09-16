@@ -6,7 +6,7 @@
   "packageManager": "npm@11.9.0",
   "scripts": {
     "dev": "vite",
-    "api": "dotnet run --project server/Tracksesh.Api",
+    "api": "node scripts/run-api.mjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "lint": "eslint .",

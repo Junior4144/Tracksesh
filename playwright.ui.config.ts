@@ -3,7 +3,7 @@
 // Presentation contract tests use deterministic network fixtures, never a live database.
 export default defineConfig({
   testDir: './e2e',
-  testMatch: 'ui.spec.ts',
+  testMatch: ['ui.spec.ts', 'admin.spec.ts'],
   fullyParallel: true,
   use: {
     baseURL: process.env.UI_BASE_URL ?? 'http://localhost:5173',

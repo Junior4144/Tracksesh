@@ -7,6 +7,7 @@ import { PasswordInput } from '@/components/PasswordInput';
 import { fetchAllBlocks, fetchTags } from '@/lib/blocks';
 import { buildExport, exportFilename } from '@/lib/export';
 import { AlertIcon, CheckCircleIcon, LockIcon } from '@/components/icons';
+import { AdminLink } from '@/components/AdminLink';
 
 /**
  * Account settings: change password, take your data with you, delete the lot.
@@ -37,6 +38,7 @@ export default function AccountPage() {
         }
       />
 
+      <AdminLink key={user.id} />
       <ChangePassword updatePassword={updatePassword} />
       <ExportData account={user} />
       <DeleteAccount email={user.email} deleteAccount={deleteAccount} />
