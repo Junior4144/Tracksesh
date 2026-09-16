@@ -1,5 +1,20 @@
 # Visual system specification
 
+## Home page addition
+
+The root `/` is a public product introduction instead of a redirect. It explains
+the track/label/review workflow and offers registration and sign-in for guests,
+or Timer and Activity for signed-in users. The brand links home from every route.
+A clearly labelled example ledger illustrates the product without implying live
+user data. Reuse existing tokens, controls and ruled sections; stack at mobile
+widths and support both themes. Existing sign-in destinations and protected routes
+remain unchanged. Verify guest and signed-in navigation plus responsive rendering.
+
+Home-page validation: typecheck, lint, 78 unit tests, production frontend build,
+.NET build, and 15 browser checks passed. Inspected desktop/light and mobile/dark
+captures. The live API tests and CSP sign-in check remain blocked by the local
+Supabase connection refusals described below.
+
 ## Audit and product requirements
 
 Tracksesh is a time ledger. Its primary loop is start, pause/resume, stop,

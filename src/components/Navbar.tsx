@@ -22,7 +22,7 @@ export function Navbar() {
       </a>
       <nav className="app-nav" aria-label="Main navigation">
         <div className="nav-inner">
-          <Link className="navbar-brand" to="/dashboard" onClick={() => setOpen(false)}>
+          <Link className="navbar-brand" to="/" onClick={() => setOpen(false)}>
             <BrandMark size={24} />
             <span>Tracksesh</span>
           </Link>
@@ -41,11 +41,18 @@ export function Navbar() {
               {(isLoggedIn
                 ? links
                 : [
+                    ['/', 'Home'],
                     ['/login', 'Sign in'],
                     ['/register', 'Get started'],
                   ]
               ).map(([to, label]) => (
-                <NavLink key={to} to={to} className="nav-link" onClick={() => setOpen(false)}>
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={to === '/'}
+                  className="nav-link"
+                  onClick={() => setOpen(false)}
+                >
                   {label}
                 </NavLink>
               ))}

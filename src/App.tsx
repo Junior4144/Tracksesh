@@ -7,6 +7,7 @@ import { Navbar } from '@/components/Navbar';
 import { AuthOnly, GuestOnly } from '@/routes/guards';
 
 import DashboardPage from '@/pages/DashboardPage';
+import HomePage from '@/pages/HomePage';
 import ActivityPage from '@/pages/ActivityPage';
 import TagsPage from '@/pages/TagsPage';
 import AccountPage from '@/pages/AccountPage';
@@ -45,7 +46,7 @@ export function App() {
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<HomePage />} />
 
       {/* Routes that read or write the ledger, so they need a user. */}
       <Route element={<AuthOnly />}>

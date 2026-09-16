@@ -126,9 +126,22 @@ async function noOverflow(page: Page) {
 
 test('all workspaces share responsive light and dark presentation', async ({ page }, info) => {
   await fixture(page);
+  await page.getByRole('link', { name: 'Tracksesh', exact: true }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('link', { name: 'Open timer' })).toHaveAttribute(
+    'href',
+    '/dashboard',
+  );
   for (const mode of ['light', 'dark']) {
     await theme(page, mode);
-    for (const path of ['dashboard', 'activity', 'tags', 'account', 'account/update-password']) {
+    for (const path of [
+      '',
+      'dashboard',
+      'activity',
+      'tags',
+      'account',
+      'account/update-password',
+    ]) {
       await page.goto(`/${path}`);
       await expect(page.locator('main')).toBeVisible();
       await expect(page.locator('h1')).toBeVisible();
@@ -207,10 +220,19 @@ test('empty and error states remain distinct', async ({ page }) => {
 
 test('authentication screens use the same compact layout', async ({ page }, info) => {
   for (const mode of ['light', 'dark']) {
-    for (const path of ['login', 'register', 'forgot-password', 'auth/link-expired']) {
+    for (const path of ['', 'login', 'register', 'forgot-password', 'auth/link-expired']) {
       await page.goto(`/${path}`);
       await theme(page, mode);
       await expect(page.locator('main h1')).toBeVisible();
+      if (path === '') {
+        await expect(
+          page.locator('main').getByRole('link', { name: 'Get started' }),
+        ).toHaveAttribute('href', '/register');
+        await expect(page.locator('main').getByRole('link', { name: 'Sign in' })).toHaveAttribute(
+          'href',
+          '/login',
+        );
+      }
       await noOverflow(page);
       await page.screenshot({
         path: `test-results/ui/${info.project.name}/${path.replace('/', '-')}-${mode}.png`,
