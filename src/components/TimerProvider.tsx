@@ -36,6 +36,7 @@ interface TimerContextValue {
   label: (tagId: number | null, note: string) => Promise<void>;
   discard: () => Promise<void>;
   dismissPending: () => void;
+  retry: () => void;
 }
 
 const TimerContext = createContext<TimerContextValue | null>(null);
@@ -70,6 +71,11 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
   const [fetched, setFetched] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const retry = useCallback(() => {
+    setError(null);
+    setAttempt((value) => value + 1);
+  }, []);
 
   /*
    * Whose stopwatch is currently cached, so a change of user throws it away.
@@ -88,6 +94,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     setBlock(null);
     setPending(null);
     setFetched(false);
+    setError(null);
   }
 
   // Derived, not stored: signed out there is nothing to look up, so the
@@ -120,23 +127,23 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     let active = true;
     const sentAt = Date.now();
 
-    Promise.all([fetchRunningBlock(), fetchServerNow()])
+    Promise.all([fetchRunningBlock(), fetchServerNow().catch(() => null)])
       .then(([running, serverIso]) => {
         if (!active) return;
-        setOffsetMs(clockOffset(serverIso, sentAt, Date.now()));
+        if (serverIso) setOffsetMs(clockOffset(serverIso, sentAt, Date.now()));
         setBlock(running);
+        setError(null);
+        setFetched(true);
       })
-      .catch(() => {
-        // Signed out or offline: stay idle rather than blocking the page.
-      })
-      .finally(() => {
-        if (active) setFetched(true);
+      .catch((failure: unknown) => {
+        if (active)
+          setError(failure instanceof Error ? failure.message : 'Current session could not load.');
       });
 
     return () => {
       active = false;
     };
-  }, [authReady, user]);
+  }, [authReady, user, attempt]);
 
   const isRunning = !!block && !block.paused_at;
 
@@ -165,7 +172,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         if (mounted.current) setBusy(false);
       }
     },
-    [user, busy]
+    [user, busy],
   );
 
   /**
@@ -186,7 +193,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         resync(started, sentAt);
         setBlock(started);
       }),
-    [run, resync]
+    [run, resync],
   );
 
   const pause = useCallback(
@@ -198,7 +205,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         resync(paused, sentAt);
         setBlock(paused);
       }),
-    [run, resync]
+    [run, resync],
   );
 
   const resume = useCallback(
@@ -210,7 +217,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         resync(resumed, sentAt);
         setBlock(resumed);
       }),
-    [run, resync]
+    [run, resync],
   );
 
   const stop = useCallback(
@@ -224,7 +231,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         // Held for labelling — "what did you do in this time?"
         if (stopped) setPending(stopped);
       }),
-    [run, resync]
+    [run, resync],
   );
 
   const label = useCallback(
@@ -235,7 +242,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         await labelBlock(target.id, tagId, note);
         if (mounted.current) setPending(null);
       }),
-    [run, pending]
+    [run, pending],
   );
 
   /** Discard a mis-start rather than leaving a stray minute in the ledger. */
@@ -247,7 +254,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         await deleteBlock(target.id);
         if (mounted.current) setPending(null);
       }),
-    [run, pending]
+    [run, pending],
   );
 
   // Keeps the block, unlabelled. Losing the time is worse than an untidy ledger.
@@ -277,6 +284,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         label,
         discard,
         dismissPending,
+        retry,
       }}
     >
       {children}

@@ -44,12 +44,13 @@ user.
 ## Getting started
 
 You need Node, the [.NET 10 SDK](https://dotnet.microsoft.com/download), and the
-Supabase CLI (or a hosted project).
+hosted Supabase project credentials.
 
 ```bash
 npm install
 cp .env.example .env            # then fill in the two values
-supabase start                  # prints the API URL and keys
+cp server/Tracksesh.Api/appsettings.Local.example.json server/Tracksesh.Api/appsettings.Local.json
+# Fill in the hosted database connection and publishable key in that ignored file.
 
 npm run api                     # terminal 1 — http://localhost:5251
 npm run dev                     # terminal 2 — http://localhost:5173
@@ -74,16 +75,17 @@ bundle, so never put a `sb_secret_…` key behind that prefix.
 
 ### Configuring the API half
 
-[server/Tracksesh.Api/appsettings.Development.json](server/Tracksesh.Api/appsettings.Development.json)
-already points at the local `supabase start` stack, using that stack's published
-defaults. For anything else, use user-secrets or environment variables:
+Development uses hosted project `hrisygvrmvvozsvoblpv`. Put its URL and publishable
+key in `.env`. Copy `server/Tracksesh.Api/appsettings.Local.example.json` to
+`server/Tracksesh.Api/appsettings.Local.json` and fill in the same publishable
+key and the database connection string from the project's Connect dialog.
+Use the session pooler on port 5432 when your network needs IPv4.
 
-```bash
-cd server/Tracksesh.Api
-dotnet user-secrets set "ConnectionStrings:Postgres" "Host=...;Database=postgres;Username=...;Password=..."
-dotnet user-secrets set "Supabase:Url" "https://<project-ref>.supabase.co"
-dotnet user-secrets set "Supabase:PublishableKey" "sb_publishable_..."
-```
+The local settings file is ignored by Git and excluded from publish output.
+Deployment uses `ConnectionStrings__Postgres`, `Supabase__Url`, and
+`Supabase__PublishableKey` environment variables. These also override local
+settings during development. Missing database configuration stops startup;
+there is no implicit local database fallback.
 
 **Do not set `Supabase:JwtSecret`** unless you know your project still signs
 with the legacy shared HS256 secret. Current stacks — local included — sign with
@@ -133,6 +135,7 @@ the demo button will fail.
 | `npm run e2e` | Playwright layout checks in a real browser |
 | `npm run e2e:shots` | Screenshots → `test-results/screens/` |
 | `npm run test:ui` | Deterministic presentation and interaction checks at three widths, with a single neutral palette; no database required |
+| `npm run test:live` | Read-only hosted Auth/API checks for sessions, refresh, tags, and activity; requires the configured database |
 | `npm run setup:demo` | Creates the demo account if missing (idempotent) |
 | `npm run test:api` | RLS isolation tests against a real Postgres |
 | `npm run test:csp` | Drives a production build, fails on any CSP violation |

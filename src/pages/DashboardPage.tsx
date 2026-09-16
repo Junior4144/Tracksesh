@@ -17,13 +17,17 @@ export default function DashboardPage() {
   const { displayName } = useAuth();
   const [recent, setRecent] = useState<TimeBlockWithTag[]>([]);
   const [recentState, setRecentState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [recentError, setRecentError] = useState('');
   const loadRecent = useCallback(() => {
     fetchRecentBlocks()
       .then((rows) => {
         setRecent(rows);
         setRecentState('ready');
       })
-      .catch(() => setRecentState('error'));
+      .catch((failure: unknown) => {
+        setRecentError(failure instanceof Error ? failure.message : 'Please try again.');
+        setRecentState('error');
+      });
   }, []);
   useEffect(() => {
     if (!timer.pending) loadRecent();
@@ -43,7 +47,11 @@ export default function DashboardPage() {
             <h2 className="section-title">Current session</h2>
             <span className="state-label" role="status">
               <span className="status-dot" />
-              {timer.ready ? STATE_LABEL[timer.status] : 'Connecting…'}
+              {timer.ready
+                ? STATE_LABEL[timer.status]
+                : timer.error
+                  ? 'Unavailable'
+                  : 'Connecting…'}
             </span>
           </div>
           <div className="timer-readout">
@@ -90,6 +98,11 @@ export default function DashboardPage() {
               {timer.error}
             </p>
           )}
+          {!timer.ready && timer.error && (
+            <button className="btn btn-ghost" onClick={timer.retry}>
+              Retry current session
+            </button>
+          )}
           <p className="timer-footnote">
             {isIdle
               ? 'No targets. No countdown. Just your time.'
@@ -109,7 +122,14 @@ export default function DashboardPage() {
             <StateMessage title="Loading recent sessions…" />
           ) : recentState === 'error' ? (
             <StateMessage title="Recent sessions couldn’t load" error>
-              <button className="btn btn-ghost mt-2" onClick={loadRecent}>
+              <p>{recentError}</p>
+              <button
+                className="btn btn-ghost mt-2"
+                onClick={() => {
+                  setRecentState('loading');
+                  loadRecent();
+                }}
+              >
                 Try again
               </button>
             </StateMessage>

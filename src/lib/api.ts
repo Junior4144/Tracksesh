@@ -15,7 +15,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api';
 export class ApiError extends Error {
   constructor(
     message: string,
-    readonly status: number
+    readonly status: number,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -85,14 +85,20 @@ async function describe(response: Response): Promise<string> {
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = await accessToken();
 
-  const response = await fetch(`${BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      ...(init.body ? { 'Content-Type': 'application/json' } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...init.headers,
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${BASE_URL}${path}`, {
+      ...init,
+      headers: {
+        ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...init.headers,
+      },
+    });
+  } catch (error) {
+    if (init.signal?.aborted) throw error;
+    throw new ApiError('Cannot reach the session service. Check your connection and try again.', 0);
+  }
 
   if (!response.ok) {
     const message = await describe(response);
@@ -108,14 +114,24 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
    * either.
    */
   const text = await response.text();
-  return (text ? JSON.parse(text) : null) as T;
+  try {
+    return (text ? JSON.parse(text) : null) as T;
+  } catch {
+    throw new ApiError(
+      'The session service returned an unexpected response. Please try again.',
+      response.status,
+    );
+  }
 }
 
 export const api = {
   get: <T>(path: string) => request<T>(path),
 
   post: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: 'POST', body: body === undefined ? undefined : JSON.stringify(body) }),
+    request<T>(path, {
+      method: 'POST',
+      body: body === undefined ? undefined : JSON.stringify(body),
+    }),
 
   patch: <T>(path: string, body: unknown) =>
     request<T>(path, { method: 'PATCH', body: JSON.stringify(body) }),

@@ -112,6 +112,18 @@ async function noOverflow(page: Page) {
   ).toBeLessThanOrEqual(1);
 }
 
+test('demo sign-in explains connection failures and allows retry', async ({ page }) => {
+  await page.route('**/auth/v1/**', (route) => route.abort('connectionrefused'));
+  await page.goto('/login');
+  const demo = page.getByRole('button', { name: 'Sign in as Demo User' });
+  await demo.click();
+  await expect(page.getByRole('alert')).toContainText('Cannot reach the sign-in service');
+  await expect(demo).toBeEnabled();
+  await expect(page).toHaveURL(/login/);
+  await fixture(page);
+  await expect(page).toHaveURL(/dashboard/);
+});
+
 test('all workspaces share responsive neutral presentation', async ({ page }, info) => {
   await fixture(page);
   await page.getByRole('link', { name: 'Tracksesh', exact: true }).click();
@@ -203,6 +215,32 @@ test('empty and error states remain distinct', async ({ page }) => {
   await page.goto('/activity');
   await expect(page.getByRole('alert')).toContainText('Activity couldn’t load');
   await noOverflow(page);
+});
+
+test('unavailable timer and recent sessions recover without a page reload', async ({ page }) => {
+  await fixture(page);
+  await page.route('**/api/session', (route) => route.abort('connectionrefused'));
+  await page.route('**/api/blocks/recent*', (route) => route.abort('connectionrefused'));
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeDisabled();
+  await expect(page.locator('.timer-workspace')).toContainText('Unavailable');
+  await expect(page.locator('.recent-blocks')).toContainText('Cannot reach the session service');
+  await page.unroute('**/api/session');
+  await page.unroute('**/api/blocks/recent*');
+  await page.getByRole('button', { name: 'Retry current session' }).click();
+  await page.getByRole('button', { name: 'Try again', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeEnabled();
+  await expect(page.locator('.recent-list li')).toHaveCount(4);
+});
+
+test('clock service failure does not hide an existing running session', async ({ page }) => {
+  await fixture(page);
+  await page.getByRole('button', { name: 'Start', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
+  await page.route('**/api/time', (route) => route.abort('connectionrefused'));
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Start', exact: true })).toHaveCount(0);
 });
 
 test('authentication screens use the same compact layout', async ({ page }, info) => {

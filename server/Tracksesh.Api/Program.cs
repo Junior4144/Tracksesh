@@ -13,6 +13,15 @@ using Tracksesh.Api.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Developer credentials stay outside tracked settings. Deployment environment
+// variables and command-line settings continue to take precedence.
+if (builder.Environment.IsDevelopment())
+{
+    builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false)
+        .AddEnvironmentVariables()
+        .AddCommandLine(args);
+}
+
 // ── Serialization ───────────────────────────────────────────────────────────
 //
 // snake_case on the wire, in both directions. The tables, the SQL, the JSON and
@@ -31,8 +40,11 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 DefaultTypeMap.MatchNamesWithUnderscores = true;
 
 // ── Database ────────────────────────────────────────────────────────────────
-var connectionString = builder.Configuration.GetConnectionString("Postgres")
-    ?? throw new InvalidOperationException("ConnectionStrings:Postgres is not configured.");
+var connectionString = builder.Configuration.GetConnectionString("Postgres");
+if (string.IsNullOrWhiteSpace(connectionString))
+    throw new InvalidOperationException(
+        "Configure ConnectionStrings:Postgres for the hosted database in appsettings.Local.json " +
+        "or the ConnectionStrings__Postgres environment variable.");
 
 builder.Services.AddNpgsqlDataSource(connectionString);
 builder.Services.AddHttpContextAccessor();

@@ -16,6 +16,7 @@
     "e2e": "playwright test dashboard.spec.ts",
     "e2e:shots": "playwright test screens.spec.ts",
     "test:ui": "playwright test -c playwright.ui.config.ts",
+    "test:live": "playwright test service.spec.ts --project=desktop",
     "test:api": "dotnet run --project server/Tracksesh.Api.Tests -p:BaseOutputPath=obj/test-bin/",
     "test:csp": "node scripts/csp-check.mjs",
     "setup:demo": "node scripts/ensure-demo-user.mjs"

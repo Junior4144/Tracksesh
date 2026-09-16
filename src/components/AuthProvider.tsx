@@ -1,6 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
+import {
+  isAuthRetryableFetchError,
+  type Session,
+  type User as SupabaseUser,
+} from '@supabase/supabase-js';
 import { NOT_CONFIGURED_MESSAGE, getSupabase, isSupabaseConfigured } from '@/lib/supabase';
 import { deleteAccount as deleteAccountOnServer } from '@/lib/blocks';
 
@@ -93,6 +97,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (email: string, password: string): Promise<AuthResult> => {
       if (!supabase) return { error: NOT_CONFIGURED_MESSAGE };
       const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error && isAuthRetryableFetchError(error)) {
+        return {
+          error:
+            'Cannot reach the sign-in service. Please check your connection and try again. ' +
+            'If this continues, the authentication service may be unavailable.',
+        };
+      }
       if (error) return { error: error.message || 'Invalid credentials. Please try again.' };
       return { error: null };
     },

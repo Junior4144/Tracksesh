@@ -26,11 +26,15 @@ test.describe('dashboard layout', () => {
     const restore = page.getByRole('button', { name: /how tracksesh works/i });
     if (await restore.isVisible()) await restore.click();
     const before = (await page.locator('.timer-workspace').boundingBox())!;
+    const scrollBefore = await page.evaluate(() => window.scrollY);
     await page.getByRole('button', { name: /close a ledger/i }).click();
     await expect(page.locator('.info-panel')).toHaveCount(0);
     const after = (await page.locator('.timer-workspace').boundingBox())!;
+    const scrollAfter = await page.evaluate(() => window.scrollY);
     expect(after.x).toBe(before.x);
-    expect(after.y).toBe(before.y);
+    // Mobile clicks scroll the lower guide into view. Compare document positions
+    // so normal scrolling is not mistaken for a layout shift.
+    expect(after.y + scrollAfter).toBeCloseTo(before.y + scrollBefore, 1);
     await expect(restore).toBeVisible();
   });
 
