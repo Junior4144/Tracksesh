@@ -47,12 +47,13 @@ user.
 ## Getting started
 
 You need Node, the [.NET 10 SDK](https://dotnet.microsoft.com/download), and the
-Supabase CLI (or a hosted project).
+hosted Supabase project credentials.
 
 ```bash
 npm install
 cp .env.example .env            # then fill in the two values
-supabase start                  # prints the API URL and keys
+cp server/Tracksesh.Api/appsettings.Local.example.json server/Tracksesh.Api/appsettings.Local.json
+# Fill in the hosted database connection and publishable key in that ignored file.
 
 npm run api                     # terminal 1 — http://localhost:5251
 npm run dev                     # terminal 2 — http://localhost:5173
@@ -64,12 +65,17 @@ as production, where one process serves both.
 
 ### Configuring the browser half
 
-`.env`, read at build time and inlined into the bundle:
+Only `VITE_*` values from `.env` are read into the browser bundle:
 
 ```
 VITE_SUPABASE_URL=https://<project-ref>.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 ```
+
+The private [admin and traffic panels](docs/TRAFFIC.md) use server-only `.env`
+settings loaded by `npm run api`. `/account` links admins to `/admin`, then
+`/admin/traffic`. PostHog provides public origin request reports and Cloudflare
+provides domain edge analytics. Provider keys never use the `VITE_` prefix.
 
 Use the **publishable** key (`sb_publishable_…`), not a secret key — legacy
 `anon` keys are compatibility-only. Anything `VITE_*` ends up in the browser
@@ -77,16 +83,17 @@ bundle, so never put a `sb_secret_…` key behind that prefix.
 
 ### Configuring the API half
 
-[server/Tracksesh.Api/appsettings.Development.json](server/Tracksesh.Api/appsettings.Development.json)
-already points at the local `supabase start` stack, using that stack's published
-defaults. For anything else, use user-secrets or environment variables:
+Development uses hosted project `hrisygvrmvvozsvoblpv`. Put its URL and publishable
+key in `.env`. Copy `server/Tracksesh.Api/appsettings.Local.example.json` to
+`server/Tracksesh.Api/appsettings.Local.json` and fill in the same publishable
+key and the database connection string from the project's Connect dialog.
+Use the session pooler on port 5432 when your network needs IPv4.
 
-```bash
-cd server/Tracksesh.Api
-dotnet user-secrets set "ConnectionStrings:Postgres" "Host=...;Database=postgres;Username=...;Password=..."
-dotnet user-secrets set "Supabase:Url" "https://<project-ref>.supabase.co"
-dotnet user-secrets set "Supabase:PublishableKey" "sb_publishable_..."
-```
+The local settings file is ignored by Git and excluded from publish output.
+Deployment uses `ConnectionStrings__Postgres`, `Supabase__Url`, and
+`Supabase__PublishableKey` environment variables. These also override local
+settings during development. Missing database configuration stops startup;
+there is no implicit local database fallback.
 
 **Do not set `Supabase:JwtSecret`** unless you know your project still signs
 with the legacy shared HS256 secret. Current stacks — local included — sign with
@@ -135,6 +142,8 @@ the demo button will fail.
 | `npm test` | Vitest suite (pure logic, jsdom) |
 | `npm run e2e` | Playwright layout checks in a real browser |
 | `npm run e2e:shots` | Screenshots → `test-results/screens/` |
+| `npm run test:ui` | Deterministic presentation and interaction checks at three widths, with a single neutral palette; no database required |
+| `npm run test:live` | Read-only hosted Auth/API checks for sessions, refresh, tags, and activity; requires the configured database |
 | `npm run setup:demo` | Creates the demo account if missing (idempotent) |
 | `npm run test:api` | RLS isolation tests against a real Postgres |
 | `npm run test:csp` | Drives a production build, fails on any CSP violation |
@@ -150,8 +159,17 @@ starts *both* servers itself, in order, because a run with only the SPA up would
 render every page with its data requests failing and report that as a layout
 problem.
 
-`e2e:shots` captures every page in both themes at all three widths — the fastest
+`e2e:shots` captures every page at all three widths — the fastest
 way to see the effect of a style change.
+
+The visual system and migration acceptance criteria are in
+[docs/VISUAL-SYSTEM.md](docs/VISUAL-SYSTEM.md). `test:ui` uses browser network
+fixtures (including auth) to check layout and interactions without changing a
+real account. It captures screenshots under `test-results/ui/`. This complements,
+and does not replace, the live API isolation and authentication checks.
+Set `UI_BASE_URL=http://localhost:5251` after a production build to exercise the
+same presentation checks under the API's CSP. Run one viewport project per minute
+against that server: its global rate limiter also counts static asset requests.
 
 `test:api` needs the database up (`supabase start`) and creates two throwaway
 users, cleaning up after itself. It builds into `obj/test-bin/` rather than the
@@ -320,12 +338,38 @@ Repository **secrets**:
 | `POSTGRES_CONNECTION` | Npgsql connection string. Runtime only — never a build arg |
 | `SUPABASE_ACCESS_TOKEN` | For `migrate.yml` |
 | `SUPABASE_DB_PASSWORD` | For `migrate.yml` |
+| `TRAFFIC_RUNTIME_CONFIG` | JSON runtime settings for admin/site analytics; store in the `production` environment. Prepared from `.env` with `node scripts/configure-traffic-actions.mjs --apply` using authenticated `gh`. |
 
 The split is not cosmetic. `VITE_*` are read at **build** time and inlined into
 the bundle, so they are permanently in the image and must be public values — a
 `sb_secret_…` passed as a build arg is readable by anyone who pulls it.
 Everything the API reads is loaded at **startup** from the container's
 environment, so it stays out of every layer.
+
+The deployment now runs the reusable CI workflow against the exact commit before
+building/pushing the release image. It enforces `main`, serializes production
+deployments, validates runtime configuration, waits for the exact Lightsail
+deployment version/image, then smoke-tests the service URL and `tracksesh.com`.
+CI includes the real database-isolation suite and admin/site authorization tests.
+
+Prepare analytics configuration once before deploying this change:
+
+```bash
+node scripts/configure-traffic-actions.mjs          # names only; no upload
+node scripts/configure-traffic-actions.mjs --apply  # authenticated gh required
+```
+
+The helper uploads an allowlisted JSON object to `TRAFFIC_RUNTIME_CONFIG` in the
+existing GitHub `production` environment. It preserves the `.env` site UUID and
+shared provider credentials. It does not upload the full `.env`, dispatch an
+Action, or deploy anything. The release configuration explicitly disables visitor
+capture and forwarded-IP trust; it enables querying existing analytics and target
+DNS/proxycheck data. Visitor capture requires a separate approved activation and
+verified ingress configuration. No database migration is needed for this feature.
+
+Local `.env*` and `appsettings.Local*.json` are excluded from Docker's build context.
+Runtime secrets are passed in a temporary private JSON file, deleted after the
+AWS request, and the AWS response is filtered so environments are not printed.
 
 Docker's linter warns `SecretsUsedInArgOrEnv` on `VITE_SUPABASE_PUBLISHABLE_KEY`
 because the name ends in `KEY`. It is a publishable key; the warning is a false
@@ -358,7 +402,6 @@ src/
     LoginPage RegisterPage ForgotPasswordPage
   components/
     AuthProvider.tsx     Supabase auth: session, password reset, deletion
-    ThemeProvider.tsx    dark/light via <html data-theme>
     TimerProvider.tsx    the session timer; above the routes so it survives navigation
     ConfirmDialog.tsx    the gate in front of anything with no undo
     PasswordInput.tsx    password field with a show/hide toggle
@@ -529,9 +572,8 @@ every picker while the blocks that reference it keep its name and colour;
 deleting sets `tag_id` to null on all of them, which is not reversible — so the
 delete confirmation counts the blocks first (`tag_usage()`).
 
-`tags.color` holds a palette **slot** (`blue`, `orange`, …), not a hex — each
-theme resolves its own step via `--series-*` in `globals.scss`, because a colour
-readable on the dark card isn't readable on white.
+`tags.color` holds a palette **slot** (`blue`, `orange`, …), not a hex — the
+neutral palette resolves each slot via `--series-*` in `globals.scss`.
 
 The running stopwatch is a database row, not client state, so a refresh or a
 closed laptop can't lose it. A partial unique index enforces at most one running

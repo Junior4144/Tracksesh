@@ -1,3 +1,4 @@
+import { Page, PageHeader, StateMessage } from '@/components/ui/Page';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/components/AuthProvider';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -55,12 +56,12 @@ export default function TagsPage() {
 
   const [active, archived] = useMemo(
     () => [tags.filter((t) => !t.is_archived), tags.filter((t) => t.is_archived)],
-    [tags]
+    [tags],
   );
 
   const replace = useCallback(
     (tag: Tag) => setTags((prev) => prev.map((t) => (t.id === tag.id ? tag : t))),
-    []
+    [],
   );
 
   async function save(tag: Tag, patch: { name: string; color: string }) {
@@ -124,25 +125,23 @@ export default function TagsPage() {
   }
 
   if (!loaded) {
-    return <div className="tags-page container-sm py-5 text-muted">Loading…</div>;
+    return (
+      <Page>
+        <StateMessage title="Loading…" />
+      </Page>
+    );
   }
 
   return (
-    <div className="tags-page container-sm py-4">
-      <header className="d-flex flex-wrap align-items-center gap-2 mb-4">
-        <div className="flex-grow-1">
-          <h1 className="h4 fw-bold mb-0">Tags</h1>
-          <p className="text-muted small mb-0">
-            The categories your time is counted under.
-          </p>
-        </div>
+    <Page className="tags-page">
+      <PageHeader title="Tags" description="The categories your time is counted under.">
         <button
           className="btn btn-accent btn-sm fw-semibold"
           onClick={() => setCreating((c) => !c)}
         >
           + New tag
         </button>
-      </header>
+      </PageHeader>
 
       {error && (
         <div className="alert alert-danger py-2 px-3 small" role="alert">
@@ -172,7 +171,7 @@ export default function TagsPage() {
           </p>
         </div>
       ) : (
-        <ul className="tag-list card-surface list-unstyled mb-0">
+        <ul className="tag-list list-unstyled mb-0">
           {active.map((tag) => (
             <TagRow
               key={tag.id}
@@ -197,7 +196,7 @@ export default function TagsPage() {
           <p className="text-muted small mb-2">
             Hidden from the tag pickers. The blocks they label keep their name and colour.
           </p>
-          <ul className="tag-list card-surface list-unstyled mb-0">
+          <ul className="tag-list list-unstyled mb-0">
             {archived.map((tag) => (
               <TagRow
                 key={tag.id}
@@ -227,7 +226,7 @@ export default function TagsPage() {
           onCancel={() => setPendingDelete(null)}
         />
       )}
-    </div>
+    </Page>
   );
 }
 
@@ -379,16 +378,15 @@ function TagFields({
           aria-label="Tag name"
         />
 
-        {/* Eight fixed slots, not a colour picker: each theme resolves its own
-            step per slot, and a free-form hue lands wherever it likes relative
+        {/* Eight fixed slots, not a colour picker: the shared palette defines one
+            color per slot, and a free-form hue lands wherever it likes relative
             to the ones checked for colour-blind separation. */}
-        <div className="tag-slots d-flex gap-1" role="radiogroup" aria-label="Colour">
+        <div className="tag-slots d-flex gap-1" role="group" aria-label="Colour">
           {TAG_SLOTS.map((slot) => (
             <button
               key={slot}
               type="button"
-              role="radio"
-              aria-checked={color === slot}
+              aria-pressed={color === slot}
               aria-label={slot}
               title={slot}
               className={`tag-slot${color === slot ? ' selected' : ''}`}

@@ -2,24 +2,22 @@
 // A list, not a grid: tags are read as a vocabulary, one per line, and the
 // usage figures only compare usefully when they share a column.
 
-.tags-page {
-  max-width: 46rem;
-}
-
 .tag-list {
-  overflow: hidden;
+  border-block: 1px solid var(--border-color);
 }
 
 .tag-row {
   display: grid;
-  grid-template-columns: auto 1fr auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   grid-template-areas: 'swatch name usage actions';
   align-items: center;
   gap: 0.75rem;
-  padding: 0.7rem 1rem;
+  padding: var(--space-4) 0;
   border-bottom: 1px solid var(--border-color);
 
-  &:last-child { border-bottom: none; }
+  &:last-child {
+    border-bottom: none;
+  }
 
   // The editor spans the whole row, so it drops the column grid entirely.
   &.tag-row-editing {
@@ -28,10 +26,18 @@
     background: rgba(var(--accent-rgb), 0.04);
   }
 
-  .tag-swatch      { grid-area: swatch; }
-  .tag-row-name    { grid-area: name; }
-  .tag-row-usage   { grid-area: usage; }
-  .tag-row-actions { grid-area: actions; }
+  .tag-swatch {
+    grid-area: swatch;
+  }
+  .tag-row-name {
+    grid-area: name;
+  }
+  .tag-row-usage {
+    grid-area: usage;
+  }
+  .tag-row-actions {
+    grid-area: actions;
+  }
 }
 
 .tag-swatch {
@@ -59,6 +65,9 @@
   align-items: center;
   gap: 0.15rem;
   white-space: nowrap;
+  .btn {
+    min-width: 40px;
+  }
 }
 
 // Below the phone breakpoint the row stacks: three buttons and a name can't
@@ -96,8 +105,8 @@
 // ── Colour slots ─────────────────────────────────────────────────────────────
 // Eight fixed swatches rather than a colour input — see TAG_SLOTS in lib/types.
 .tag-slot {
-  width: 22px;
-  height: 22px;
+  width: 32px;
+  height: 32px;
   border-radius: 6px;
   border: 1px solid transparent;
   padding: 0;
@@ -110,20 +119,15 @@
   &.selected {
     // A ring in the surface colour plus a border, so the selected swatch is
     // marked by shape rather than by a colour change to the swatch itself.
-    box-shadow: 0 0 0 2px var(--card-bg), 0 0 0 3px var(--text-primary);
+    box-shadow:
+      0 0 0 2px var(--card-bg),
+      0 0 0 3px var(--text-primary);
   }
 
   &:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px var(--card-bg), 0 0 0 3px var(--accent);
+    box-shadow:
+      0 0 0 2px var(--card-bg),
+      0 0 0 3px var(--accent);
   }
-}
-
-// ── Confirmations / block editor ─────────────────────────────────────────────
-.confirm-dialog {
-  max-width: 24rem;
-}
-
-.edit-block {
-  max-width: 30rem;
 }

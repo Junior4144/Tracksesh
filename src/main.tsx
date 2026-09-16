@@ -9,6 +9,7 @@ import '@/styles/dashboard.scss';
 import '@/styles/activity.scss';
 import '@/styles/tags.scss';
 import '@/styles/account.scss';
+import '@/styles/admin.scss';
 
 import { App } from './App';
 

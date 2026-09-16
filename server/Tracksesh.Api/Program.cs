@@ -10,8 +10,18 @@ using Tracksesh.Api.Auth;
 using Tracksesh.Api.Data;
 using Tracksesh.Api.Endpoints;
 using Tracksesh.Api.Security;
+using Tracksesh.Api.Admin;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Developer credentials stay outside tracked settings. Deployment environment
+// variables and command-line settings continue to take precedence.
+if (builder.Environment.IsDevelopment())
+{
+    builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false)
+        .AddEnvironmentVariables()
+        .AddCommandLine(args);
+}
 
 // ── Serialization ───────────────────────────────────────────────────────────
 //
@@ -31,8 +41,11 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 DefaultTypeMap.MatchNamesWithUnderscores = true;
 
 // ── Database ────────────────────────────────────────────────────────────────
-var connectionString = builder.Configuration.GetConnectionString("Postgres")
-    ?? throw new InvalidOperationException("ConnectionStrings:Postgres is not configured.");
+var connectionString = builder.Configuration.GetConnectionString("Postgres");
+if (string.IsNullOrWhiteSpace(connectionString))
+    throw new InvalidOperationException(
+        "Configure ConnectionStrings:Postgres for the hosted database in appsettings.Local.json " +
+        "or the ConnectionStrings__Postgres environment variable.");
 
 builder.Services.AddNpgsqlDataSource(connectionString);
 builder.Services.AddHttpContextAccessor();
@@ -43,6 +56,16 @@ var supabaseUrl = (builder.Configuration["Supabase:Url"] ?? "").TrimEnd('/');
 
 builder.Services.AddSupabaseJwt(builder.Configuration);
 builder.Services.AddHttpClient<SupabaseAuthClient>();
+builder.Services.AddHttpClient<AdminAccess>(client => client.Timeout = TimeSpan.FromSeconds(10));
+builder.Services.AddSingleton<TrafficOptions>();
+builder.Services.AddSingleton<MonitoredSites>();
+builder.Services.AddSingleton<TrafficQueue>();
+builder.Services.AddHttpClient<TrafficProviders>(client => client.Timeout = TimeSpan.FromSeconds(12))
+    .RemoveAllLoggers()
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+builder.Services.AddTransient<TrafficReports>();
+builder.Services.AddTransient<TargetReports>();
+builder.Services.AddHostedService<TrafficWorker>();
 
 builder.Services.AddExceptionHandler<PostgresExceptionHandler>();
 builder.Services.AddProblemDetails();
@@ -130,6 +153,7 @@ if (allowedOrigins.Length > 0)
 var app = builder.Build();
 
 app.UseExceptionHandler();
+app.UseMiddleware<TrafficCaptureMiddleware>();
 
 /*
  * Transport security, in production only — a dev machine has no certificate and
@@ -185,6 +209,7 @@ app.MapTagEndpoints();
 app.MapBlockEndpoints();
 app.MapSessionEndpoints();
 app.MapAccountEndpoints();
+app.MapAdminEndpoints();
 
 // Liveness, and the one route that deliberately needs no token. It reports
 // nothing about the process — no version, no dependencies — because an

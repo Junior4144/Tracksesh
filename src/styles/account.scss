@@ -1,23 +1,15 @@
-// ── Account settings ─────────────────────────────────────────────────────────
-
-.account-page {
-  max-width: 34rem;
+﻿.account-card {
+  max-width: var(--width-reading);
+  padding-block: var(--space-8);
+  border-top: 1px solid var(--border-color);
 }
-
-.account-card {
-  padding: 1.25rem;
+.account-card > p {
+  max-width: 40rem;
 }
-
-// Narrow, because these are single short values — a password field stretched
-// across the full card reads as though it wants a paragraph.
 .account-form {
-  max-width: 20rem;
+  max-width: var(--width-form);
+  margin-top: var(--space-6);
 }
-
-// Delete is set apart rather than styled like the sections above it: it's the
-// only thing on the page that can't be undone, and it shouldn't look like a
-// setting.
 .account-danger {
-  border-color: color-mix(in srgb, var(--bs-danger) 35%, var(--border-color));
-  margin-top: 2rem;
+  margin-top: var(--space-8);
 }

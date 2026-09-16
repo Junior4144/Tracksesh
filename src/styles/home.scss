@@ -1,0 +1,95 @@
+.home-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-16);
+  padding-block: var(--space-12) var(--space-16);
+}
+.home-copy h1 {
+  font-size: clamp(2rem, 3.5vw, 3rem);
+  line-height: 1.15;
+  margin-bottom: var(--space-6);
+}
+.home-description {
+  max-width: 28rem;
+  color: var(--text-muted);
+  margin-bottom: var(--space-8);
+}
+.home-note {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin: var(--space-6) 0 0;
+}
+.home-ledger {
+  padding: var(--space-8);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-surface);
+  background: var(--card-bg);
+}
+.home-total {
+  display: flex;
+  flex-direction: column;
+  padding-block: var(--space-4) var(--space-6);
+  strong {
+    font-size: 2rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+  span {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+  }
+}
+.home-entry {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block: var(--space-4);
+  border-top: 1px solid var(--border-color);
+  font-size: var(--text-sm);
+  strong {
+    font-weight: 500;
+  }
+  p {
+    margin: var(--space-1) 0 0;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+}
+.home-duration {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.home-ledger-note {
+  margin: var(--space-4) 0 0;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+.home-workflow {
+  padding-block: var(--space-8);
+  border-top: 1px solid var(--border-color);
+}
+.home-footer {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  border-top: 1px solid var(--border-color);
+  padding-top: var(--space-6);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+@media (max-width: 767px) {
+  .home-intro {
+    grid-template-columns: 1fr;
+    padding-block: var(--space-4) var(--space-8);
+    gap: var(--space-8);
+  }
+  .home-ledger {
+    padding: var(--space-6);
+  }
+  .home-workflow > .section-heading {
+    flex-wrap: wrap;
+  }
+}

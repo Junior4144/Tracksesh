@@ -3,30 +3,21 @@
 // to the baseline, a 2px surface-coloured gap between adjacent fills, and
 // recessive grid lines. Text always wears text tokens — never a series colour.
 
-.activity {
-  max-width: 56rem;
-}
-
-.card-surface {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 0.85rem;
-}
-
 .chart-card {
-  padding: 1.15rem 1.25rem 1.25rem;
+  min-width: 0;
+  padding-block: var(--space-6);
+  border-bottom: 1px solid var(--border-color);
 }
-
 .chart-grid {
   display: grid;
-  gap: 1rem;
-  grid-template-columns: 1fr;
-
-  @media (min-width: 62em) {
-    grid-template-columns: 1fr 1fr;
+  gap: var(--space-8);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 767px) {
+  .chart-grid {
+    grid-template-columns: 1fr;
   }
 }
-
 .chart-figure {
   margin: 0;
 }
@@ -36,10 +27,10 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0.5rem;
-  font-size: 0.92rem;
+  font-size: var(--text-section);
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 0.9rem;
+  margin-bottom: var(--space-6);
 }
 
 .chart-subtitle {
@@ -54,7 +45,9 @@
   background: var(--card-bg);
   color: var(--text-muted);
 
-  &:hover { color: var(--text-primary); }
+  &:hover {
+    color: var(--text-primary);
+  }
 
   &.active {
     color: var(--accent);
@@ -67,26 +60,21 @@
 // A single number needs no chart.
 .stat-row {
   display: grid;
-  gap: 0.75rem;
-  grid-template-columns: repeat(2, 1fr);
-
-  @media (min-width: 40em) {
-    grid-template-columns: repeat(4, 1fr);
-  }
+  grid-template-columns: repeat(4, 1fr);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: var(--space-6);
+  gap: var(--space-6);
 }
-
 .stat-tile {
-  padding: 0.85rem 1rem;
-  border-radius: 0.75rem;
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-
-  &.primary .stat-value { color: var(--accent); }
+  padding: var(--space-2) 0;
+}
+.stat-tile.primary .stat-value {
+  color: var(--accent);
 }
 
 .stat-value {
-  font-size: 1.45rem;
-  font-weight: 700;
+  font-size: 1.75rem;
+  font-weight: 600;
   line-height: 1.15;
   font-variant-numeric: tabular-nums;
   color: var(--text-primary);
@@ -171,8 +159,12 @@
   border-radius: 3px;
   outline: none;
 
-  &.hovered { background: rgba(var(--accent-rgb), 0.07); }
-  &:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
+  &.hovered {
+    background: rgba(var(--accent-rgb), 0.07);
+  }
+  &:focus-visible {
+    box-shadow: 0 0 0 2px var(--accent);
+  }
 }
 
 .trend-stack {
@@ -189,12 +181,14 @@
   // quantities rather than one blended block.
   box-shadow: 0 -2px 0 0 var(--card-bg);
 
-  &:first-child { box-shadow: none; }
+  &:first-child {
+    box-shadow: none;
+  }
 }
 
 .trend-label {
   position: absolute;
-  bottom: 0;
+  bottom: -1.25rem;
   left: 0;
   right: 0;
   text-align: center;
@@ -214,7 +208,7 @@
   border-radius: 0.5rem;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-overlay);
   font-size: 0.76rem;
   color: var(--text-primary);
   pointer-events: none;
@@ -286,12 +280,18 @@
   // A 2px surface ring so overlapping blocks in adjacent lanes stay separable.
   box-shadow: 0 0 0 2px var(--card-bg);
 
-  &.hovered { filter: brightness(1.12); }
-  &:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
+  &.hovered {
+    filter: brightness(1.12);
+  }
+  &:focus-visible {
+    box-shadow: 0 0 0 2px var(--accent);
+  }
 
   // The strip is where a misplaced block is spotted, so it's also where it's
   // opened for editing.
-  &.selectable { cursor: pointer; }
+  &.selectable {
+    cursor: pointer;
+  }
 }
 
 .day-block-label {
@@ -323,13 +323,20 @@
 }
 
 // ── Session table ────────────────────────────────────────────────────────────
-// The table view is the exact-numbers companion to the charts, and the relief
-// the palette validator requires for the light-mode slots under 3:1 contrast.
-// It has to be readable in both themes, so every Bootstrap table variable is
-// mapped rather than left on its light defaults.
+// Tables provide exact values alongside charts. Bootstrap table variables use
+// the shared palette to keep surfaces and text consistent.
 .session-card {
   padding: 0.35rem 0.25rem;
   overflow: hidden;
+}
+
+.table-scroll-hint {
+  display: none;
+}
+@media (max-width: 767px) {
+  .table-scroll-hint {
+    display: block;
+  }
 }
 
 .session-table {
@@ -383,29 +390,9 @@
     white-space: nowrap;
   }
 
-  // Row actions stay quiet until the row is hovered, so the column doesn't read
-  // as a wall of icons — and the delete one as a wall of red.
   .session-action {
-    opacity: 0;
-    transition: opacity 0.12s ease;
-  }
-
-  tr:hover .session-action,
-  .session-action:focus-visible {
     opacity: 1;
-  }
-}
-
-// Touch devices have no hover, so the actions would never appear.
-@media (hover: none) {
-  .session-table .session-action {
-    opacity: 1;
-  }
-}
-
-@media (max-width: 34em) {
-  .session-table .session-note {
-    display: none;
+    min-width: 36px;
   }
 }
 
@@ -414,8 +401,15 @@
   padding: 1.25rem;
 }
 
-.empty-state {
-  border: 1px dashed var(--border-color);
-  border-radius: 0.85rem;
-  color: var(--text-primary);
+.range-label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+@media (max-width: 767px) {
+  .stat-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .range-label {
+    flex-basis: 100%;
+  }
 }

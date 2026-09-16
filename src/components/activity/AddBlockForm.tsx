@@ -1,9 +1,9 @@
+import { TagPicker } from '@/components/ui/TagPicker';
 import { useState } from 'react';
 import { createManualBlock } from '@/lib/blocks';
 import { combine, dateValue, validateBlockRange } from '@/lib/edits';
 import { formatTotal } from '@/lib/time';
-import { slotColor, type Tag } from '@/lib/types';
-import { CheckSmallIcon } from '@/components/icons';
+import { type Tag } from '@/lib/types';
 
 /**
  * Backfill — "I read for 36 minutes at 2pm and forgot to hit start".
@@ -31,9 +31,10 @@ export function AddBlockForm({
 
   const startedAt = combine(date, start);
   const endedAt = combine(date, end);
-  const durationSeconds = Number.isNaN(startedAt.getTime()) || Number.isNaN(endedAt.getTime())
-    ? 0
-    : (endedAt.getTime() - startedAt.getTime()) / 1000;
+  const durationSeconds =
+    Number.isNaN(startedAt.getTime()) || Number.isNaN(endedAt.getTime())
+      ? 0
+      : (endedAt.getTime() - startedAt.getTime()) / 1000;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -109,21 +110,7 @@ export function AddBlockForm({
 
       <div className="mb-3">
         <label className="form-label small text-muted mb-1">Tag</label>
-        <div className="tag-picker d-flex flex-wrap gap-2">
-          {tags.map((tag) => (
-            <button
-              key={tag.id}
-              type="button"
-              className={`tag-chip${tagId === tag.id ? ' selected' : ''}`}
-              style={{ '--tag-color': slotColor(tag.color) } as React.CSSProperties}
-              onClick={() => setTagId(tagId === tag.id ? null : tag.id)}
-            >
-              <span className="tag-dot" />
-              {tag.name}
-              {tagId === tag.id && <CheckSmallIcon className="ms-1" size={11} />}
-            </button>
-          ))}
-        </div>
+        <TagPicker tags={tags} value={tagId} onChange={setTagId}></TagPicker>
       </div>
 
       <div className="mb-3">

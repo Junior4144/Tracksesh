@@ -44,7 +44,7 @@ export function InfoPanel({
   }
 
   return (
-    <section className="info-panel card-surface" aria-labelledby={`${id}-title`}>
+    <section className="info-panel" aria-labelledby={`${id}-title`}>
       <header className="info-panel-head">
         {icon && <span className="info-panel-icon">{icon}</span>}
 

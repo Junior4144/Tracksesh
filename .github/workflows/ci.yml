@@ -1,13 +1,14 @@
 name: CI
 
 on:
+  workflow_call:
   pull_request:
   push:
     branches: [main]
 
 # A second push to the same branch makes the first run's answer irrelevant.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -18,6 +19,9 @@ env:
   DOTNET_VERSION: '10.0.x'
   DOTNET_NOLOGO: 'true'
   DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+  TRAFFIC_ENABLED: 'false'
+  TRAFFIC_INGRESS_LOCKED: 'false'
+  TRAFFIC_TRUSTED_PROXY_HOPS: '0'
 
 jobs:
   check:
@@ -63,12 +67,16 @@ jobs:
         run: |
           supabase status -o env | grep -E '^[A-Z_]+=' > "$RUNNER_TEMP/sb.env"
           . "$RUNNER_TEMP/sb.env"
-          # Only the two the SPA build inlines. The API finds the database
-          # through appsettings.Development.json, and the RLS tests through
-          # their own local default, so neither needs the URL exported here.
+          # CI always targets this disposable stack. Development settings now
+          # point at hosted Supabase and contain no database connection.
+          test -n "$API_URL" && test -n "$PUBLISHABLE_KEY"
           {
             echo "VITE_SUPABASE_URL=$API_URL"
             echo "VITE_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY"
+            echo "Supabase__Url=$API_URL"
+            echo "Supabase__PublishableKey=$PUBLISHABLE_KEY"
+            echo "ConnectionStrings__Postgres=Host=127.0.0.1;Port=54322;Database=postgres;Username=postgres;Password=postgres"
+            echo "DATABASE_URL_ADO=Host=127.0.0.1;Port=54322;Database=postgres;Username=postgres;Password=postgres"
           } >> "$GITHUB_ENV"
 
       # The login page advertises this account and both the CSP check and the
@@ -79,6 +87,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
+      - run: npm run test:deployment
       - run: dotnet build server --configuration Release
 
       # ── The security guards ─────────────────────────────────────────────
@@ -95,9 +104,7 @@ jobs:
 
       - name: Start the API over the built SPA
         run: |
-          # Development, so it reads appsettings.Development.json and finds the
-          # local stack without a pile of env vars. The production config path
-          # is exercised by the deploy workflow's image build instead.
+          # Explicit environment above supplies the disposable local stack.
           ASPNETCORE_ENVIRONMENT=Development \
           ASPNETCORE_URLS=http://localhost:5251 \
           nohup dotnet run --project server/Tracksesh.Api --no-launch-profile \
@@ -119,6 +126,14 @@ jobs:
       # on the production build. Without this step a broken policy ships.
       - name: CSP check
         run: npm run test:csp
+
+      - name: Admin HTTP access checks
+        run: node scripts/check-admin-access.mjs
+
+      - name: Admin and site-isolation browser checks over production SPA
+        env:
+          UI_BASE_URL: http://localhost:5251
+        run: npx playwright test -c playwright.ui.config.ts admin.spec.ts
 
       - name: Playwright layout checks
         run: npm run e2e
