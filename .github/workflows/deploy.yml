@@ -1,6 +1,8 @@
 name: Deploy
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       confirm:
@@ -26,12 +28,16 @@ jobs:
   validate-request:
     runs-on: ubuntu-latest
     steps:
-      - name: Require main and explicit confirmation
+      - name: Require main and confirm manual runs
         env:
           CONFIRM: ${{ inputs.confirm }}
         run: |
-          if [ "$GITHUB_REF" != 'refs/heads/main' ] || [ "$CONFIRM" != 'deploy' ]; then
-            echo "::error::Run from main and type deploy to confirm."
+          if [ "$GITHUB_REF" != 'refs/heads/main' ]; then
+            echo "::error::Production deployments must run from main."
+            exit 1
+          fi
+          if [ "$GITHUB_EVENT_NAME" = 'workflow_dispatch' ] && [ "$CONFIRM" != 'deploy' ]; then
+            echo "::error::Type deploy to confirm a manual deployment."
             exit 1
           fi
 
