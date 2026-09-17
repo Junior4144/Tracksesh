@@ -9,11 +9,12 @@ export async function checkDeployment(base, request = fetch) {
   const health = await get('/api/health');
   assert.equal(health.status, 200, '/api/health should be healthy');
   assert.equal((await health.json()).status, 'ok');
-  for (const path of ['/admin', '/admin/traffic']) {
+  for (const path of ['/', '/login', '/auth/confirm', '/account/update-password', '/admin', '/admin/traffic']) {
     const page = await get(path);
     assert.equal(page.status, 200, `${path} should serve the SPA`);
     assert.match(page.headers.get('content-type') ?? '', /text\/html/);
     assert.match(page.headers.get('content-security-policy') ?? '', /script-src 'self'/);
+    assert.match(page.headers.get('cache-control') ?? '', /no-store/, `${path} must not cache an old app shell`);
   }
   for (const path of ['/api/admin/', '/api/admin/sites', '/api/admin/traffic']) {
     assert.equal((await get(path)).status, 401, `${path} should deny anonymous access`);
