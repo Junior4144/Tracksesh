@@ -198,4 +198,5 @@ jobs:
             --query 'containerServices[0].url' --output text)
           node scripts/deployment-smoke.mjs "$URL"
           node scripts/deployment-smoke.mjs https://tracksesh.com
+          node scripts/deployment-smoke.mjs https://www.tracksesh.com
           echo "Live at $URL"

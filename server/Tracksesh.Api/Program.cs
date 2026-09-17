@@ -237,7 +237,20 @@ app.Map("/api/{**rest}", () => Results.NotFound());
  * doesn't exist.
  */
 app.UseDefaultFiles();
-app.UseStaticFiles();
-app.MapFallbackToFile("index.html");
+// HTML selects the release's hashed assets and handles one-time auth callbacks.
+// A cached shell can keep running old auth code after a successful deployment.
+var spaFiles = new StaticFileOptions
+{
+    OnPrepareResponse = context =>
+    {
+        if (context.File.Name.Equals("index.html", StringComparison.OrdinalIgnoreCase))
+        {
+            context.Context.Response.Headers.CacheControl = "no-store, max-age=0";
+            context.Context.Response.Headers.Pragma = "no-cache";
+        }
+    }
+};
+app.UseStaticFiles(spaFiles);
+app.MapFallbackToFile("index.html", spaFiles);
 
 app.Run();

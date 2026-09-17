@@ -6,7 +6,7 @@ function response(path, apiStatus = 401) {
   if (path === '/api/health') return Response.json({ status: 'ok' });
   if (path.startsWith('/api/')) return new Response(null, { status: apiStatus });
   return new Response('<html></html>', { headers: {
-    'Content-Type': 'text/html', 'Content-Security-Policy': "script-src 'self'",
+    'Content-Type': 'text/html', 'Content-Security-Policy': "script-src 'self'", 'Cache-Control': 'no-store, max-age=0',
   } });
 }
 const options = { attempts: 3, delayMs: 0, wait: async () => {}, log: () => {} };
@@ -43,4 +43,14 @@ test('missing CSP remains a deployment failure', async () => {
       ? new Response('<html></html>', { headers: { 'Content-Type': 'text/html' } })
       : response(url.pathname),
   }), /script-src/);
+});
+
+test('cacheable recovery HTML remains a deployment failure', async () => {
+  await assert.rejects(waitForDeployment('https://example.com', {
+    ...options, request: async url => {
+      const result = response(url.pathname);
+      if (url.pathname === '/auth/confirm') result.headers.delete('cache-control');
+      return result;
+    },
+  }), /must not cache an old app shell/);
 });
