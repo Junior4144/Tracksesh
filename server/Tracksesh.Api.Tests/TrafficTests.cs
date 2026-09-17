@@ -177,6 +177,55 @@ public sealed class TrafficTests
         Assert.Equal("error", report.Status); Assert.Null(report.Data);
     }
 
+    [Theory]
+    [InlineData(HttpStatusCode.Unauthorized, "credential")]
+    [InlineData(HttpStatusCode.Forbidden, "Query Read")]
+    [InlineData(HttpStatusCode.NotFound, "US/EU")]
+    [InlineData(HttpStatusCode.TooManyRequests, "rate limiting")]
+    [InlineData(HttpStatusCode.BadRequest, "query format")]
+    public async Task Posthog_reports_actionable_errors_without_provider_response_data(HttpStatusCode status, string message)
+    {
+        var handler = new FakeHttp(_ => new(status) { Content = new StringContent("secret-provider-detail") });
+        var options = Options();
+        var report = await new TrafficReports(new(new HttpClient(handler), options), options)
+            .PostHogAsync(Site(), new(), DateTimeOffset.UtcNow, CancellationToken.None);
+        Assert.Equal("error", report.Status);
+        Assert.Contains(message, report.Message);
+        Assert.DoesNotContain("secret-provider-detail", report.Message);
+        Assert.Null(report.Data);
+    }
+
+    [Fact]
+    public async Task Posthog_timeout_is_not_misreported_as_a_permission_problem()
+    {
+        var handler = new FakeHttp(_ => throw new TaskCanceledException());
+        var options = Options();
+        var report = await new TrafficReports(new(new HttpClient(handler), options), options)
+            .PostHogAsync(Site(), new(), DateTimeOffset.UtcNow, CancellationToken.None);
+        Assert.Equal("error", report.Status);
+        Assert.Contains("took too long", report.Message);
+        Assert.Null(report.Data);
+    }
+
+    [Fact]
+    public async Task Provider_request_budget_cancels_slow_requests()
+    {
+        using var http = new HttpClient(new SlowHttp()) { Timeout = Timeout.InfiniteTimeSpan };
+        var providers = new TrafficProviders(http, Options());
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => providers.SendAsync(
+            "https://us.posthog.com/api/projects/1/query/", new { }, "test", CancellationToken.None,
+            TimeSpan.FromMilliseconds(20)));
+    }
+
+    private sealed class SlowHttp : HttpMessageHandler
+    {
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            await Task.Delay(Timeout.Infinite, cancellationToken);
+            return new(HttpStatusCode.OK);
+        }
+    }
+
     [Fact]
     public async Task Every_aggregate_and_recent_query_applies_the_same_filters()
     {
