@@ -60,7 +60,9 @@ builder.Services.AddHttpClient<AdminAccess>(client => client.Timeout = TimeSpan.
 builder.Services.AddSingleton<TrafficOptions>();
 builder.Services.AddSingleton<MonitoredSites>();
 builder.Services.AddSingleton<TrafficQueue>();
-builder.Services.AddHttpClient<TrafficProviders>(client => client.Timeout = TimeSpan.FromSeconds(12))
+// TrafficProviders applies bounded per-request budgets; PostHog queries can
+// legitimately take longer than the other provider lookups.
+builder.Services.AddHttpClient<TrafficProviders>(client => client.Timeout = Timeout.InfiniteTimeSpan)
     .RemoveAllLoggers()
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddTransient<TrafficReports>();

@@ -25,13 +25,16 @@ public sealed class TrafficReports(TrafficProviders providers, TrafficOptions op
     public async Task<ProviderReport> PostHogAsync(AuthorizedSite site, TrafficFilter filter, DateTimeOffset end, CancellationToken cancel)
     {
         if (!options.QueryReady) return new("setup", "Configure POSTHOG_HOST, POSTHOG_PROJECT_ID and a project-scoped POSTHOG_QUERY_KEY with Query Read permission.");
+        using var reportBudget = CancellationTokenSource.CreateLinkedTokenSource(cancel);
+        reportBudget.CancelAfter(TimeSpan.FromSeconds(60));
         try
         {
             var where = filter.Where(site.Target.SiteId, end);
             async Task<JsonElement> Query(string sql)
             {
                 var body = await providers.SendAsync($"{options.PostHogHost()}/api/projects/{options.Value("POSTHOG_PROJECT_ID")}/query/",
-                    new { query = new { kind = "HogQLQuery", query = sql } }, options.Value("POSTHOG_QUERY_KEY"), cancel);
+                    new { query = new { kind = "HogQLQuery", query = sql } }, options.Value("POSTHOG_QUERY_KEY"), reportBudget.Token,
+                    TimeSpan.FromSeconds(30));
                 if (body.TryGetProperty("error", out _) ||
                     !body.TryGetProperty("results", out var results) || results.ValueKind != JsonValueKind.Array)
                     throw new JsonException();
@@ -44,8 +47,23 @@ public sealed class TrafficReports(TrafficProviders providers, TrafficOptions op
             var recent = await Query($"select timestamp, properties.path, properties.public_ip, properties.country, properties.city, properties.provider, properties.network, properties.bot, properties.evidence, properties.vpn, properties.proxy, properties.tor from events where {where} order by timestamp desc limit 100");
             return new("connected", "Recorded origin requests, not people or sessions. Ingestion can be delayed; enrichment can be partial.", new { summary, daily, countries, paths, recent });
         }
-        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or JsonException or InvalidOperationException)
-        { return new("error", "PostHog could not return a report. Check the project, Query Read permission, region and provider availability."); }
+        catch (OperationCanceledException) when (!cancel.IsCancellationRequested)
+        { return new("error", "PostHog took too long to return this report. Retry or choose a shorter time range."); }
+        catch (HttpRequestException e)
+        {
+            var message = e.StatusCode switch
+            {
+                System.Net.HttpStatusCode.Unauthorized => "PostHog rejected the query credential. Check the deployed POSTHOG_QUERY_KEY.",
+                System.Net.HttpStatusCode.Forbidden => "PostHog denied access. The query key needs Query Read permission for this project.",
+                System.Net.HttpStatusCode.NotFound => "PostHog could not find this project. Check POSTHOG_PROJECT_ID and the US/EU region.",
+                System.Net.HttpStatusCode.TooManyRequests => "PostHog is rate limiting queries. Wait a moment before refreshing.",
+                System.Net.HttpStatusCode.BadRequest => "PostHog rejected the report query. The query format needs investigation.",
+                _ => "PostHog is temporarily unreachable or returned a server error. Please retry."
+            };
+            return new("error", message);
+        }
+        catch (Exception e) when (e is JsonException or InvalidOperationException)
+        { return new("error", "PostHog returned an incomplete report. Please retry."); }
     }
 
     public async Task<ProviderReport> CloudflareAsync(AuthorizedSite site, int days, DateTimeOffset end, CancellationToken cancel)

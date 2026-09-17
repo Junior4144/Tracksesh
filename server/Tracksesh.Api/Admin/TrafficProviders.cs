@@ -11,14 +11,16 @@ public sealed class TrafficProviders(HttpClient http, TrafficOptions options)
     public string EventKey => $"tracksesh:traffic:events:{DateTime.UtcNow:yyyy-MM}";
     public string LookupKey => $"tracksesh:traffic:lookups:{DateTime.UtcNow:yyyy-MM-dd}";
 
-    public async Task<JsonElement> SendAsync(string url, object? body, string? token, CancellationToken cancel)
+    public async Task<JsonElement> SendAsync(string url, object? body, string? token, CancellationToken cancel, TimeSpan? timeout = null)
     {
+        using var budget = CancellationTokenSource.CreateLinkedTokenSource(cancel);
+        budget.CancelAfter(timeout ?? TimeSpan.FromSeconds(12));
         using var request = new HttpRequestMessage(body == null ? HttpMethod.Get : HttpMethod.Post, url);
         if (body != null) request.Content = JsonContent.Create(body);
         if (token != null) request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        using var response = await http.SendAsync(request, cancel);
+        using var response = await http.SendAsync(request, budget.Token);
         response.EnsureSuccessStatusCode();
-        using var document = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancel), cancellationToken: cancel);
+        using var document = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(budget.Token), cancellationToken: budget.Token);
         return document.RootElement.Clone();
     }
 
