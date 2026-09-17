@@ -72,10 +72,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!supabase) return;
 
     let active = true;
+    let sessionChanged = false;
 
     supabase.auth.getUser().then(({ data }) => {
       if (!active) return;
-      setUser(toUser(data.user));
+      if (!sessionChanged) setUser(toUser(data.user));
       setReady(true);
     });
 
@@ -84,6 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session: Session | null) => {
+      sessionChanged = true;
       setUser(toUser(session?.user));
     });
 
@@ -134,18 +136,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * neither does this — callers show the same "check your inbox" either way.
    * A per-address answer here would be a user-enumeration endpoint.
    *
-   * No `redirectTo`: where the link lands is baked into the email template
-   * (supabase/templates/recovery.html), which points at /auth/confirm with
-   * `next=/account/update-password`.
+   * Use the requesting origin (already in the Supabase redirect allowlist).
+   * Startup routes the default email's recovery fragment to /auth/confirm.
+   * Custom token-hash templates remain supported too.
    */
   const requestPasswordReset = useCallback(
     async (email: string): Promise<AuthResult> => {
       if (!supabase) return { error: NOT_CONFIGURED_MESSAGE };
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin,
+      });
       // Rate limiting is the one thing worth surfacing — silently swallowing it
       // would leave the user pressing a button that looks like it worked.
       if (error && error.status === 429) {
         return { error: 'Too many requests. Wait a minute and try again.' };
+      }
+      if (error && error.code !== 'user_not_found') {
+        return { error: 'Could not send the recovery email. Please try again shortly.' };
       }
       return { error: null };
     },

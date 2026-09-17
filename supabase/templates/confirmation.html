@@ -1,7 +1,7 @@
 <!--
-  Sign-up confirmation email. Same reasoning as recovery.html: {{ .TokenHash }}
-  verified server-side by /auth/confirm, not the default {{ .ConfirmationURL }},
-  so the link works from whichever device opens the inbox.
+  Optional custom confirmation email, retained for existing installations.
+  The SPA verifies {{ .TokenHash }} in /auth/confirm and also accepts default
+  Supabase email redirects. config.toml no longer requires this customization.
 
   `next` falls back to /dashboard when the sign-up didn't specify a redirect.
 -->

@@ -48,8 +48,8 @@ export function getSupabase(): SupabaseClient {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
-      // Emailed links carry a `token_hash` that src/pages/AuthConfirm.tsx
-      // redeems explicitly. There is no fragment for this to pick up.
+      // AuthConfirmPage explicitly handles both token hashes and default email
+      // fragments. Do not let SDK initialization consume the callback twice.
       detectSessionInUrl: false,
     },
   });

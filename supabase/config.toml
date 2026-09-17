@@ -312,21 +312,10 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
-# Both templates build their own link from {{ .TokenHash }} rather than using
-# the default {{ .ConfirmationURL }}, because this is a server-rendered app:
-# @supabase/ssr forces the PKCE flow, whose `?code=` only resolves in the browser
-# that started it. /auth/confirm verifies the token hash server-side instead.
-# See src/app/auth/confirm/route.ts.
-#
-# `supabase config push` sends these to the linked project, so the templates are
-# version-controlled rather than hand-edited in the dashboard.
-[auth.email.template.confirmation]
-subject = "Confirm your Tracksesh account"
-content_path = "./supabase/templates/confirmation.html"
-
-[auth.email.template.recovery]
-subject = "Reset your Tracksesh password"
-content_path = "./supabase/templates/recovery.html"
+# Use Supabase's default confirmation and recovery emails. Custom templates
+# cannot be pushed on the free default email provider. The SPA accepts both
+# default fragment redirects and legacy /auth/confirm?token_hash= links, so
+# recovery does not depend on a template customization being deployed.
 
 # Uncomment to customize email template
 # [auth.email.template.invite]

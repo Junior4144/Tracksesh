@@ -1,6 +1,6 @@
 import { AuthLayout } from '@/components/ui/AuthLayout';
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Link } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/components/AuthProvider';
 import { PasswordInput } from '@/components/PasswordInput';
@@ -17,12 +17,12 @@ interface UpdateForm {
  *
  * No current-password field: the emailed token is what proved ownership, and
  * anyone arriving here by definition doesn't know the old one. That's also why
- * the route is behind the normal auth check in proxy.ts — reaching it without
+ * the route is behind the normal AuthOnly guard — reaching it without
  * a session means the link wasn't verified, and there is nothing to change.
  */
 export default function UpdatePasswordPage() {
   const { updatePassword } = useAuth();
-  const navigate = useNavigate();
+  const [saved, setSaved] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +47,7 @@ export default function UpdatePasswordPage() {
       setLoading(false);
       return;
     }
-    navigate('/dashboard', { replace: true });
+    setSaved(true);
   }
 
   // `isSubmitted` as well as touched: on its own, `touchedFields` hides errors
@@ -55,6 +55,14 @@ export default function UpdatePasswordPage() {
   // refuses to submit and says nothing about why.
   const shown = (field: keyof UpdateForm) =>
     isSubmitted || touchedFields[field] ? errors[field]?.message : undefined;
+
+  if (saved) return (
+    <AuthLayout>
+      <h1 className="auth-title">Password updated</h1>
+      <p>You can now sign in with your new password.</p>
+      <Link to="/dashboard" replace className="btn btn-accent w-100">Continue to dashboard</Link>
+    </AuthLayout>
+  );
 
   return (
     <AuthLayout>

@@ -3,26 +3,9 @@ import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import type { EmailOtpType } from '@supabase/supabase-js';
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase';
-import {} from '@/components/icons';
+import { authDestination } from '@/lib/auth-links';
 
-/**
- * Where every emailed auth link lands: sign-up confirmation, password recovery,
- * email change.
- *
- * This used to be a server route, and it existed because `@supabase/ssr` forces
- * the PKCE flow — PKCE's `?code=` can only be redeemed by the browser that
- * started the flow, so opening the email on a phone after signing up on a
- * laptop failed. The templates in supabase/templates/ work around that by
- * building their own link from `{{ .TokenHash }}` rather than the default
- * `{{ .ConfirmationURL }}`, and something has to verify that hash.
- *
- * Doing it here, in the browser, is what dropping the server made possible.
- * `verifyOtp` with a token hash is not bound to the browser that started
- * anything, so cross-device links keep working — and the whole class of bug the
- * old route carried a long comment about simply stops existing: there are no
- * session cookies to land on the wrong host, and no redirect for a proxy to
- * rewrite. The templates do not change.
- */
+/** Accept both custom token-hash links and default Supabase email redirects. */
 export default function AuthConfirmPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -44,23 +27,34 @@ export default function AuthConfirmPage() {
     const type = searchParams.get('type') as EmailOtpType | null;
     const next = searchParams.get('next');
 
-    if (!tokenHash || !type || !isSupabaseConfigured()) {
+    const fragment = new URLSearchParams(window.location.hash.slice(1));
+    const code = searchParams.get('code');
+    const recovery = type === 'recovery' || fragment.get('type') === 'recovery';
+    // Remove credentials from the address bar/history before making requests.
+    window.history.replaceState(null, '', '/auth/confirm');
+    if (!isSupabaseConfigured() || fragment.has('error') || fragment.has('error_code') || searchParams.has('error')) {
       expired();
       return;
     }
 
-    // Only same-origin paths, so a crafted `next` can't turn a link we sent
-    // into an open redirect to someone else's site.
-    const destination = next?.startsWith('/') && !next.startsWith('//') ? next : '/dashboard';
-
-    getSupabase()
-      .auth.verifyOtp({ type, token_hash: tokenHash })
-      .then(({ error }) => {
-        // `replace`, so Back doesn't return to a link that is now spent.
-        if (error) expired();
-        else navigate(destination, { replace: true });
-      })
-      .catch(expired);
+    const auth = getSupabase().auth;
+    const allowedTypes = ['signup', 'invite', 'magiclink', 'recovery', 'email_change', 'email'];
+    const verify = async () => {
+      if (tokenHash && type && allowedTypes.includes(type)) {
+        return auth.verifyOtp({ type, token_hash: tokenHash });
+      }
+      if (fragment.get('access_token') && fragment.get('refresh_token')) {
+        return auth.setSession({
+          access_token: fragment.get('access_token')!, refresh_token: fragment.get('refresh_token')!,
+        });
+      }
+      if (code) return auth.exchangeCodeForSession(code);
+      throw new Error('Missing email credentials');
+    };
+    verify().then(({ data, error }) => {
+      if (error || !data.session) expired();
+      else navigate(authDestination(next, recovery || ('redirectType' in data && data.redirectType === 'recovery')), { replace: true });
+    }).catch(expired);
   }, [searchParams, navigate]);
 
   return (
