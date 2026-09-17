@@ -354,6 +354,20 @@ Smoke checks retry up to 12 times with five-second pauses while traffic switches
 to the new release; every route and authorization check must pass in one attempt.
 CI includes the real database-isolation suite and admin/site authorization tests.
 
+Password recovery supports Supabase's default email redirects and existing
+custom token-hash links. Callbacks are processed before route guards, clear
+credentials from the URL, and open `/account/update-password`. The reset request
+uses the requesting origin, which must be in the Supabase redirect allowlist.
+Custom email templates are optional; production recovery no longer depends on
+successfully pushing a template customization.
+
+CI also runs recovery browser checks and a real email test against disposable
+Supabase + Mailpit: request email, open it in another browser, save a new password,
+reject the old password and reused link, and verify legacy token-hash support.
+Run the fixture checks with `npx playwright test -c playwright.ui.config.ts recovery.spec.ts`.
+The live test requires `LOCAL_SUPABASE_ADMIN_KEY` for the local stack only; it
+refuses non-local Supabase hosts and deletes its temporary test account.
+
 Prepare analytics configuration once before deploying this change:
 
 ```bash
