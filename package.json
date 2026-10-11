@@ -22,7 +22,7 @@
     "check:local": "npm run typecheck && npm run lint && npm test && npm run test:deployment && npm run test:api && npm run build && dotnet build server --configuration Release && npm run test:ui -- --workers=4",
     "test:csp": "node scripts/csp-check.mjs",
     "test:seo": "node scripts/seo-check.mjs",
-    "test:deployment": "node --test scripts/deployment-config.test.mjs scripts/deployment-smoke.test.mjs",
+    "test:deployment": "node --test scripts/deployment-config.test.mjs scripts/deployment-smoke.test.mjs scripts/ensure-demo-user.test.mjs",
     "setup:demo": "node scripts/ensure-demo-user.mjs"
   },
   "prettier": {

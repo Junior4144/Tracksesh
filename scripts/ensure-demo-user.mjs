@@ -82,13 +82,14 @@ async function main() {
 
   if (result.error_code === 'user_already_exists') {
     console.error(
-      `${EMAIL} exists but the password is not "${PASSWORD}" — or it is unconfirmed. ` +
+      `${EMAIL} exists but the configured password was rejected, or the account is unconfirmed. ` +
         'Reset it in Studio, or delete the user and re-run.'
     );
     return 1;
   }
 
-  console.error(`Could not create ${EMAIL}:`, result.msg ?? result.error_description ?? result);
+  // Auth responses can contain credentials; never copy their bodies into CI logs.
+  console.error(`Could not create the demo account (HTTP ${signUp.status}).`);
   return 1;
 }
 
