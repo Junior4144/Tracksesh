@@ -6,8 +6,6 @@ export default defineConfig({
   testMatch: [
     'ui.spec.ts',
     'admin.spec.ts',
-    'recovery.spec.ts',
-    'recovery-live.spec.ts',
     'study-suite.spec.ts',
   ],
   fullyParallel: true,

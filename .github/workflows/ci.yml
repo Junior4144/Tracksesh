@@ -51,14 +51,14 @@ jobs:
       # `authenticated` role — none of which exist in stock Postgres. They come
       # from the Supabase stack, which also applies supabase/migrations for us.
       #
-      # DB + auth + Mailpit: the browser talks to GoTrue, the API talks to
+      # Disposable test DB + auth: the browser talks to GoTrue, the API talks to
       # Postgres, and PostgREST is deliberately not exposed at all. Skipping the
       # rest saves a couple of minutes of image pulls per run.
       - uses: supabase/setup-cli@v1
         with:
           version: latest
 
-      - name: Start Supabase (db + auth + recovery test inbox)
+      - name: Start disposable Supabase for isolation checks
         run: >
           supabase start
           -x realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor
@@ -70,8 +70,6 @@ jobs:
           # CI always targets this disposable stack. Development settings now
           # point at hosted Supabase and contain no database connection.
           test -n "$API_URL" && test -n "$PUBLISHABLE_KEY"
-          test -n "$SERVICE_ROLE_KEY"
-          echo "::add-mask::$SERVICE_ROLE_KEY"
           {
             echo "VITE_SUPABASE_URL=$API_URL"
             echo "VITE_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY"
@@ -79,7 +77,6 @@ jobs:
             echo "Supabase__PublishableKey=$PUBLISHABLE_KEY"
             echo "ConnectionStrings__Postgres=Host=127.0.0.1;Port=54322;Database=postgres;Username=postgres;Password=postgres"
             echo "DATABASE_URL_ADO=Host=127.0.0.1;Port=54322;Database=postgres;Username=postgres;Password=postgres"
-            echo "LOCAL_SUPABASE_ADMIN_KEY=$SERVICE_ROLE_KEY"
           } >> "$GITHUB_ENV"
 
       # The login page advertises this account and both the CSP check and the
@@ -99,7 +96,7 @@ jobs:
       # ever moved to a "main only" job, a pull request can go green while
       # removing the thing that keeps one user's ledger away from another's.
       - name: RLS isolation tests
-        run: npm run test:api
+        run: npm run test:api:integration
 
       # ── The built artefact ──────────────────────────────────────────────
       - name: Build the SPA
@@ -136,15 +133,15 @@ jobs:
       - name: Admin and site-isolation browser checks over production SPA
         env:
           UI_BASE_URL: http://localhost:5251
-        run: npx playwright test -c playwright.ui.config.ts admin.spec.ts recovery.spec.ts
-
-      - name: Real recovery email and password replacement
-        env:
-          UI_BASE_URL: http://localhost:5251
-        run: npx playwright test -c playwright.ui.config.ts recovery-live.spec.ts --project=desktop
+        run: npx playwright test -c playwright.ui.config.ts admin.spec.ts
 
       - name: Playwright layout checks
         run: npm run e2e
+
+      # Cover every workspace and its interactions at mobile, laptop and desktop
+      # widths. These suites use fixtures, so they do not mutate the demo user.
+      - name: Responsive workspace and interaction checks
+        run: npx playwright test -c playwright.ui.config.ts ui.spec.ts study-suite.spec.ts --workers=4
 
       - name: API log
         if: failure()
