@@ -24,6 +24,12 @@ env:
   TRAFFIC_TRUSTED_PROXY_HOPS: '0'
 
 jobs:
+  security:
+    name: Dependency security
+    uses: ./.github/workflows/security.yml
+    permissions:
+      contents: read
+
   check:
     name: Checks
     runs-on: ubuntu-latest

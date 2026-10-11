@@ -1,0 +1,29 @@
+name: Dependency security
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 8 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: npm and NuGet audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Audit all npm dependencies, including build and test tools
+        run: npm audit --audit-level=low
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Audit direct and transitive NuGet dependencies
+        run: dotnet restore server --force -p:NuGetAudit=true -p:NuGetAuditMode=all -p:NuGetAuditLevel=low -warnaserror:NU1900,NU1901,NU1902,NU1903,NU1904,NU1905

@@ -1,5 +1,15 @@
 # Tracksesh
 
+[![CI](https://github.com/Junior4144/Tracksesh/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Junior4144/Tracksesh/actions/workflows/ci.yml)
+[![Dependency security](https://github.com/Junior4144/Tracksesh/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/Junior4144/Tracksesh/actions/workflows/security.yml)
+
+CI audits npm and NuGet dependencies, including transitive and development
+packages, and blocks deployment if an audit fails. Dependency audits also run
+daily; Dependabot proposes weekly updates for npm, NuGet, GitHub Actions, and
+Docker. See the [security dashboard](https://github.com/Junior4144/Tracksesh/security)
+for current findings. Passing checks are evidence for the checks performed,
+not a guarantee that the application has no vulnerabilities.
+
 **Live at [www.tracksesh.com](https://www.tracksesh.com)** — there is a demo
 account on the sign-up page if you would rather not make one.
 
