@@ -1,5 +1,8 @@
 # Visual system specification
 
+The active design is now [Study suite foundation](STUDY-SUITE-SPEC.md).
+The notes below document the previous ledger interface and its verification.
+
 ## Single neutral appearance (supersedes the two-theme tokens below)
 
 Use one warm stone canvas (#d6d7ce), ivory surfaces (#e7e8df), charcoal text

@@ -17,12 +17,14 @@ import { TagIcon, TrashIcon } from '@/components/icons';
 export function SessionLabelPrompt({
   block,
   busy,
+  error,
   onSave,
   onDiscard,
   onDismiss,
 }: {
   block: TimeBlock;
   busy: boolean;
+  error?: string | null;
   onSave: (tagId: number | null, note: string) => void;
   onDiscard: () => void;
   onDismiss: () => void;
@@ -40,7 +42,7 @@ export function SessionLabelPrompt({
     let active = true;
     fetchTags()
       .then((rows) => active && setTags(rows))
-      .catch(() => active && setTagError('Could not load your tags.'));
+      .catch(() => active && setTagError('Could not load your subjects.'));
     return () => {
       active = false;
     };
@@ -68,12 +70,13 @@ export function SessionLabelPrompt({
     } catch (e) {
       // The API already words a name clash for a human; anything else is a
       // failure to reach it at all.
-      setTagError(e instanceof ApiError ? e.message : 'Could not create that tag.');
+      setTagError(e instanceof ApiError ? e.message : 'Could not create that subject.');
     }
   }
 
   return (
     <Dialog labelledBy="labelPromptTitle" onDismiss={onDismiss} busy={busy}>
+      {error && <p className="alert alert-danger" role="alert">{error}</p>}
       <div className="text-center mb-3">
         <p className="text-muted small text-uppercase letter-spacing mb-1">Session complete</p>
         <h3 id="labelPromptTitle" className="fw-bold mb-1">
@@ -88,7 +91,7 @@ export function SessionLabelPrompt({
       <div className="mb-3">
         <label className="form-label small text-muted d-flex align-items-center gap-1">
           <TagIcon size={12} />
-          Tag
+          Subject
         </label>
 
         <TagPicker tags={tags} value={selected} onChange={setSelected}>
@@ -98,7 +101,7 @@ export function SessionLabelPrompt({
                 className="form-control form-control-sm tag-create-input"
                 value={newTagName}
                 onChange={(e) => setNewTagName(e.target.value)}
-                placeholder="Tag name"
+                placeholder="Subject name"
                 maxLength={40}
                 autoFocus
                 onKeyDown={(e) => {
@@ -122,7 +125,7 @@ export function SessionLabelPrompt({
               className="tag-chip tag-chip-new"
               onClick={() => setCreating(true)}
             >
-              + New tag
+              + New subject
             </button>
           )}
         </TagPicker>

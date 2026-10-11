@@ -2,8 +2,7 @@
 import { Link } from 'react-router';
 import { useAuth } from '@/components/AuthProvider';
 import { useTimer } from '@/components/TimerProvider';
-import { SessionLabelPrompt } from '@/components/SessionLabelPrompt';
-import { HowItWorks } from '@/components/panels/HowItWorks';
+import { StudyOverview } from '@/components/StudyOverview';
 import { Page, PageHeader, StateMessage } from '@/components/ui/Page';
 import { fetchRecentBlocks } from '@/lib/blocks';
 import { blockDuration, formatClock, formatTotal } from '@/lib/time';
@@ -36,15 +35,16 @@ export default function DashboardPage() {
 
   return (
     <Page className="dashboard">
-      <PageHeader title="Timer" description={`Welcome back, ${displayName}. Take your time.`}>
-        <Link to="/activity?add=1" className="btn btn-ghost">
+      <PageHeader title={`A fresh moment, ${displayName}.`} description={new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}>
+        <Link to="/insights?add=1" className="btn btn-ghost">
           Add time manually
         </Link>
       </PageHeader>
+      <StudyOverview />
       <div className="dashboard-layout">
         <section className={`timer-workspace timer-${timer.status}`} aria-label="Stopwatch">
           <div className="timer-workspace-heading">
-            <h2 className="section-title">Current session</h2>
+            <h2 className="section-title">Your focus space</h2>
             <span className="state-label" role="status">
               <span className="status-dot" />
               {timer.ready
@@ -60,7 +60,7 @@ export default function DashboardPage() {
             </div>
             <p className="timer-sub">
               {isIdle
-                ? 'Start the clock when you begin.'
+                ? 'One subject. A little focus. Begin when you’re ready.'
                 : timer.block
                   ? `Started at ${formatClock(timer.block.started_at)}`
                   : ''}
@@ -105,7 +105,7 @@ export default function DashboardPage() {
           )}
           <p className="timer-footnote">
             {isIdle
-              ? 'No targets. No countdown. Just your time.'
+              ? 'Count up at your own pace. Choose a subject when you finish.'
               : 'Paused time is excluded. Label your session when you stop.'}
           </p>
         </section>
@@ -114,8 +114,8 @@ export default function DashboardPage() {
             <h2 id="recent-title" className="section-title">
               Recent sessions
             </h2>
-            <Link to="/activity" className="link-accent small">
-              View activity →
+            <Link to="/insights" className="link-accent small">
+              View insights →
             </Link>
           </div>
           {recentState === 'loading' ? (
@@ -135,7 +135,7 @@ export default function DashboardPage() {
             </StateMessage>
           ) : recent.length === 0 ? (
             <StateMessage title="Your ledger starts here">
-              Finish a session and give it a tag. It will appear here.
+              Finish a session and choose a subject. It will appear here.
             </StateMessage>
           ) : (
             <ul className="list-unstyled recent-list">
@@ -161,18 +161,6 @@ export default function DashboardPage() {
           )}
         </section>
       </div>
-      <aside className="dashboard-guide">
-        <HowItWorks />
-      </aside>
-      {timer.pending && (
-        <SessionLabelPrompt
-          block={timer.pending}
-          busy={timer.busy}
-          onSave={(tagId, note) => timer.label(tagId, note)}
-          onDiscard={timer.discard}
-          onDismiss={timer.dismissPending}
-        />
-      )}
     </Page>
   );
 }

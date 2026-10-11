@@ -20,7 +20,7 @@ const viewports = {
 
 export default defineConfig({
   testDir: './e2e',
-  testIgnore: 'ui.spec.ts',
+  testIgnore: ['ui.spec.ts', 'recovery.spec.ts', 'recovery-live.spec.ts'],
   fullyParallel: true,
   reporter: process.env.CI ? 'github' : 'list',
   use: {

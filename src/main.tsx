@@ -10,6 +10,7 @@ import '@/styles/activity.scss';
 import '@/styles/tags.scss';
 import '@/styles/account.scss';
 import '@/styles/admin.scss';
+import '@/styles/study-suite.scss';
 
 import { App } from './App';
 import { authCallbackPath } from '@/lib/auth-links';

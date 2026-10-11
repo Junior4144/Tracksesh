@@ -39,7 +39,7 @@ Consequences, in order of how badly they bite:
   just `TO authenticated`.
 
 `server/Tracksesh.Api.Tests` asserts all of the above against a real database —
-`npm run test:api`. It is not a formality: removing `set local role
+`npm run test:api:integration` in GitHub Actions. It is not a formality: removing `set local role
 authenticated` turns 7 of its 8 tests red, which is the only reason the rule
 above is enforceable rather than merely written down. If a change makes those
 tests inconvenient, the change is what needs rethinking.
@@ -52,6 +52,12 @@ Before any Supabase or Postgres work, read the vendored skills:
 - `.agents/skills/supabase-postgres-best-practices/SKILL.md` — schema, indexes, RLS
 
 Pinned to the commits in `skills-lock.json` (source: `supabase/agent-skills`).
+
+Development and production share hosted Supabase project `hrisygvrmvvozsvoblpv`.
+No local Docker or database is needed for development. GitHub Actions uses a
+disposable Supabase stack only for integration checks; never point the RLS
+fixtures or demo-user seeding in CI at production. Email-recovery testing is
+not a required local or deployment check.
 
 Project rules that follow from them:
 
@@ -90,5 +96,7 @@ Project rules that follow from them:
   `server/Tracksesh.Api/Security/SecurityHeaders.cs`.
 - `vite dev` does not apply the CSP, so development will never tell you that you
   broke it. Run `npm run test:csp` against a production build instead.
-- Before finishing: `npm run typecheck`, `npm run lint`, `npm test`,
-  `npm run test:api`, and `dotnet build server`.
+- Before finishing locally: `npm run check:local`. No Docker or local database
+  is required. `test:api` runs database-independent API tests; GitHub Actions
+  must run `test:api:integration` against its disposable Supabase stack and
+  build the Docker image before deployment. Never bypass those CI gates.

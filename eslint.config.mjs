@@ -47,7 +47,7 @@ export default tseslint.config(
       // hooks is narrower than switching the rule off.
       'react-refresh/only-export-components': [
         'error',
-        { allowExportNames: ['useAuth', 'useTheme', 'useTimer'] },
+        { allowExportNames: ['useAuth', 'useTheme', 'useTimer', 'useStudyPlan'] },
       ],
     },
   },

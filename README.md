@@ -3,8 +3,16 @@
 **Live at [www.tracksesh.com](https://www.tracksesh.com)** — there is a demo
 account on the sign-up page if you would rather not make one.
 
-A time ledger: a stopwatch that records **what** you spent time on, so you can
-see where your hours went. React (Vite) + ASP.NET Core + Supabase, Bootstrap 5.
+A study workspace: plan a routine, divide available time between subjects,
+record focus sessions, and review actual effort. React (Vite) + ASP.NET Core
++ Supabase, Bootstrap 5. The current design and acceptance criteria are in
+[docs/STUDY-SUITE-SPEC.md](docs/STUDY-SUITE-SPEC.md).
+
+The Planner projects calendar weeks, months, years and custom date ranges,
+and allocates a time budget after breaks. Saved plans are browser-local and
+scoped to the signed-in account; recorded sessions remain server-backed.
+Subjects retain the existing tags data and API contract. `/tags` and `/activity`
+remain supported alongside `/subjects` and `/insights`.
 
 Stop the clock and it asks "what did you do?"; you tag the block and it lands in
 your day. Time you forgot to track can be backfilled by hand. See
@@ -83,7 +91,8 @@ bundle, so never put a `sb_secret_…` key behind that prefix.
 
 ### Configuring the API half
 
-Development uses hosted project `hrisygvrmvvozsvoblpv`. Put its URL and publishable
+Development and production share hosted project `hrisygvrmvvozsvoblpv`, including
+its Auth users and database records. Put its URL and publishable
 key in `.env`. Copy `server/Tracksesh.Api/appsettings.Local.example.json` to
 `server/Tracksesh.Api/appsettings.Local.json` and fill in the same publishable
 key and the database connection string from the project's Connect dialog.
@@ -123,15 +132,26 @@ Every link is built from `site_url`, so **set it to your deployed origin before
 shipping**, and mirror it in the hosted project's Auth → URL Configuration (or
 `supabase config push`).
 
-**Testing auth locally:** nothing leaves the machine. Mail lands in Mailpit at
-http://127.0.0.1:54324. Flipping `enable_confirmations` needs
-`supabase stop && supabase start`.
+**Development auth:** uses the same hosted Supabase Auth as production.
+No local Supabase, Docker, or email inbox is needed. Email-recovery tests are
+excluded from the default local and CI checks.
 
 **Demo user:** the login page advertises `demo@tracksesh.com` / `demo1234`.
 Create that user (Authentication → Users → Add user, "Auto Confirm" checked) or
 the demo button will fail.
 
 ## Scripts
+
+Run `npm run check:local` before pushing. It checks types, lint, unit tests,
+deployment configuration, database-independent API tests, the production build,
+the .NET Release build, and responsive browser tests. It needs Node, .NET and
+Playwright Chromium (`npx playwright install chromium`), but no Docker or local
+database. Browser tests use fixtures; normal development uses hosted Supabase.
+
+GitHub Actions owns the deployment gate: it starts disposable Supabase, runs
+the complete API suite including real RLS isolation and CSP
+checks, responsive browser checks, and a Docker image build. Deployment waits
+for both CI jobs to pass. A successful local check does not replace that gate.
 
 | Command | What it does |
 |---|---|
@@ -145,7 +165,9 @@ the demo button will fail.
 | `npm run test:ui` | Deterministic presentation and interaction checks at three widths, with a single neutral palette; no database required |
 | `npm run test:live` | Read-only hosted Auth/API checks for sessions, refresh, tags, and activity; requires the configured database |
 | `npm run setup:demo` | Creates the demo account if missing (idempotent) |
-| `npm run test:api` | RLS isolation tests against a real Postgres |
+| `npm run check:local` | All local checks, without Docker or a local database |
+| `npm run test:api` | Database-independent API tests |
+| `npm run test:api:integration` | Complete API suite including real Postgres RLS isolation; required in CI |
 | `npm run test:csp` | Drives a production build, fails on any CSP violation |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `tsc --noEmit` |
@@ -171,7 +193,8 @@ Set `UI_BASE_URL=http://localhost:5251` after a production build to exercise the
 same presentation checks under the API's CSP. Run one viewport project per minute
 against that server: its global rate limiter also counts static asset requests.
 
-`test:api` needs the database up (`supabase start`) and creates two throwaway
+`test:api:integration` needs a disposable database (provided by GitHub Actions)
+and creates throwaway
 users, cleaning up after itself. It builds into `obj/test-bin/` rather than the
 usual output so it runs while `npm run api` holds the normal one — a security
 test you have to stop your dev server to run is a security test nobody runs.
@@ -361,12 +384,11 @@ uses the requesting origin, which must be in the Supabase redirect allowlist.
 Custom email templates are optional; production recovery no longer depends on
 successfully pushing a template customization.
 
-CI also runs recovery browser checks and a real email test against disposable
-Supabase + Mailpit: request email, open it in another browser, save a new password,
-reject the old password and reused link, and verify legacy token-hash support.
-Run the fixture checks with `npx playwright test -c playwright.ui.config.ts recovery.spec.ts`.
-The live test requires `LOCAL_SUPABASE_ADMIN_KEY` for the local stack only; it
-refuses non-local Supabase hosts and deletes its temporary test account.
+Email-recovery testing is not a deployment requirement. The recovery test sources
+remain available for future investigation, but neither default Playwright config
+nor CI selects them. Password recovery itself remains available in the app.
+CI's disposable Supabase stack is only a test fixture: development and production
+both use the hosted project, and CI never seeds or runs destructive tests there.
 
 Prepare analytics configuration once before deploying this change:
 
@@ -489,7 +511,7 @@ Both settings are `SET LOCAL`, so they die with the transaction; Npgsql pools
 connections, and a setting that outlived its transaction would hand the next
 request the previous user's identity.
 
-That guarantee is a test, not a comment. `npm run test:api` creates two real
+That guarantee is a test, not a comment. `npm run test:api:integration` creates two real
 users and asserts that neither can read, update, delete or plant a row on the
 other, that the role really was dropped, that nothing survives the transaction,
 and that none of it breaks under concurrency. Deleting the single line

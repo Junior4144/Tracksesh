@@ -2,6 +2,7 @@ import { Page, PageHeader, StateMessage } from '@/components/ui/Page';
 import { useSearchParams } from 'react-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { useTimer } from '@/components/TimerProvider';
 import { TagTotals } from '@/components/activity/TagTotals';
 import { DailyTrend } from '@/components/activity/DailyTrend';
 import { DayStrip } from '@/components/activity/DayStrip';
@@ -22,13 +23,13 @@ const MODES: { key: RangeMode; label: string }[] = [
   { key: 'month', label: 'Month' },
 ];
 
-const STEP_DAYS: Record<RangeMode, number> = { day: 1, week: 7, month: 30 };
-
 export default function ActivityPage() {
+  const timer = useTimer();
   const [searchParams] = useSearchParams();
   const [mode, setMode] = useState<RangeMode>('week');
   /** Days away from today; the "Today" button resets it to 0. */
   const [offsetDays, setOffsetDays] = useState(0);
+  const [offsetMonths, setOffsetMonths] = useState(0);
   const [blocks, setBlocks] = useState<TimeBlockWithTag[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [loadError, setLoadError] = useState(false);
@@ -38,6 +39,7 @@ export default function ActivityPage() {
   const [editing, setEditing] = useState<TimeBlockWithTag | null>(null);
   const [pendingDelete, setPendingDelete] = useState<TimeBlockWithTag | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   /** Bumped to force a refetch after adding or deleting a block. */
   const [nonce, setNonce] = useState(0);
 
@@ -46,16 +48,20 @@ export default function ActivityPage() {
   // hydrating) and pure. Not subscribed — the page doesn't need to tick.
   const nowMs = useClock(false);
 
-  const anchor = useMemo(
-    () => (nowMs === 0 ? null : addDays(new Date(nowMs), offsetDays)),
-    [nowMs, offsetDays],
-  );
+  const anchor = useMemo(() => {
+    if (nowMs === 0) return null;
+    const day = addDays(new Date(nowMs), offsetDays);
+    return mode === 'month' ? new Date(day.getFullYear(), day.getMonth() + offsetMonths, 1) : day;
+  }, [nowMs, offsetDays, offsetMonths, mode]);
   const range = useMemo(() => (anchor ? rangeFor(mode, anchor) : null), [mode, anchor]);
 
   // Identifies the data currently on screen. Deriving `loading` from it avoids
   // a synchronous setState in the effect, and it can't get out of step with
   // what was actually fetched.
-  const rangeKey = range ? `${mode}:${range.from.getTime()}:${nonce}` : null;
+  // Stopping, labelling or discarding through the global dock changes pending.
+  const rangeKey = range
+    ? `${mode}:${range.from.getTime()}:${nonce}:${timer.pending?.id ?? 'none'}`
+    : null;
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const loading = rangeKey !== null && loadedKey !== rangeKey;
 
@@ -98,16 +104,22 @@ export default function ActivityPage() {
   async function confirmRemove() {
     if (!pendingDelete) return;
     setDeleting(true);
+    setDeleteError(null);
     try {
       await deleteBlock(pendingDelete.id);
       setPendingDelete(null);
       reload();
+    } catch {
+      setDeleteError('Could not delete this session. Please try again.');
     } finally {
       setDeleting(false);
     }
   }
 
-  const shift = (direction: -1 | 1) => setOffsetDays((o) => o + direction * STEP_DAYS[mode]);
+  const shift = (direction: -1 | 1) => {
+    if (mode === 'month') setOffsetMonths((o) => o + direction);
+    else setOffsetDays((o) => o + direction * (mode === 'week' ? 7 : 1));
+  };
 
   const rangeLabel = () => {
     if (!range || !anchor) return '';
@@ -133,7 +145,10 @@ export default function ActivityPage() {
 
   return (
     <Page className="activity-page">
-      <PageHeader title="Activity" description="See where your hours went.">
+      <PageHeader
+        title="Insights"
+        description="Your recorded effort, in perspective. Explore what you studied and when."
+      >
         <button className="btn btn-accent" onClick={() => setAdding((a) => !a)}>
           + Add time
         </button>
@@ -158,7 +173,14 @@ export default function ActivityPage() {
           <button type="button" className="btn" onClick={() => shift(-1)} aria-label="Previous">
             ‹
           </button>
-          <button type="button" className="btn" onClick={() => setOffsetDays(0)}>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              setOffsetDays(0);
+              setOffsetMonths(0);
+            }}
+          >
             Today
           </button>
           <button type="button" className="btn" onClick={() => shift(1)} aria-label="Next">
@@ -247,7 +269,7 @@ export default function ActivityPage() {
                 <table className="table table-sm table-hover session-table">
                   <thead>
                     <tr>
-                      <th scope="col">Tag</th>
+                      <th scope="col">Subject</th>
                       <th scope="col">Day</th>
                       <th scope="col">Start</th>
                       <th scope="col">End</th>
@@ -295,7 +317,10 @@ export default function ActivityPage() {
                           </button>
                           <button
                             className="btn btn-ghost btn-sm text-danger p-1 session-action"
-                            onClick={() => setPendingDelete(b)}
+                            onClick={() => {
+                              setDeleteError(null);
+                              setPendingDelete(b);
+                            }}
                             aria-label={`Delete ${b.tag?.name ?? 'unlabelled'} session`}
                             title="Delete"
                           >
@@ -332,6 +357,11 @@ export default function ActivityPage() {
               {pendingDelete.tag?.name ?? 'Unlabelled'} · {formatClock(pendingDelete.started_at)}–
               {formatClock(pendingDelete.ended_at!)} · {formatTotal(blockDuration(pendingDelete))}.
               This removes the time from your totals for good.
+              {deleteError && (
+                <p role="alert" className="text-danger mt-2 mb-0">
+                  {deleteError}
+                </p>
+              )}
             </>
           }
           confirmLabel="Delete block"
