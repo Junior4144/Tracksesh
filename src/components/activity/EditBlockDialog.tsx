@@ -156,10 +156,10 @@ export function EditBlockDialog({
       )}
 
       <div className="mb-3">
-        <label className="form-label small text-muted mb-1">Tag</label>
+        <label className="form-label small text-muted mb-1">Subject</label>
         <TagPicker tags={options} value={tagId} onChange={setTagId}></TagPicker>
         <p className="text-muted small mt-2 mb-0">
-          {tagId === null ? 'Unlabelled — pick a tag, or leave it.' : 'Click again to unlabel.'}
+          {tagId === null ? 'Unlabelled — pick a subject, or leave it.' : 'Click again to unlabel.'}
         </p>
       </div>
 

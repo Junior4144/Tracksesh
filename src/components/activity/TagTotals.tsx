@@ -21,7 +21,7 @@ export function TagTotals({ totals }: { totals: TagTotal[] }) {
 
   return (
     <figure className="chart-figure mb-0">
-      <figcaption className="chart-title">Time per tag</figcaption>
+      <figcaption className="chart-title">Time per subject</figcaption>
 
       <ul className="tag-totals list-unstyled mb-0">
         {totals.map((t) => (

@@ -109,7 +109,7 @@ export function AddBlockForm({
       </div>
 
       <div className="mb-3">
-        <label className="form-label small text-muted mb-1">Tag</label>
+        <label className="form-label small text-muted mb-1">Subject</label>
         <TagPicker tags={tags} value={tagId} onChange={setTagId}></TagPicker>
       </div>
 

@@ -3,8 +3,16 @@
 **Live at [www.tracksesh.com](https://www.tracksesh.com)** — there is a demo
 account on the sign-up page if you would rather not make one.
 
-A time ledger: a stopwatch that records **what** you spent time on, so you can
-see where your hours went. React (Vite) + ASP.NET Core + Supabase, Bootstrap 5.
+A study workspace: plan a routine, divide available time between subjects,
+record focus sessions, and review actual effort. React (Vite) + ASP.NET Core
++ Supabase, Bootstrap 5. The current design and acceptance criteria are in
+[docs/STUDY-SUITE-SPEC.md](docs/STUDY-SUITE-SPEC.md).
+
+The Planner projects calendar weeks, months, years and custom date ranges,
+and allocates a time budget after breaks. Saved plans are browser-local and
+scoped to the signed-in account; recorded sessions remain server-backed.
+Subjects retain the existing tags data and API contract. `/tags` and `/activity`
+remain supported alongside `/subjects` and `/insights`.
 
 Stop the clock and it asks "what did you do?"; you tag the block and it lands in
 your day. Time you forgot to track can be backfilled by hand. See

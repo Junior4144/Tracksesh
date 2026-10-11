@@ -14,7 +14,7 @@ export function TagPicker({
   children?: ReactNode;
 }) {
   return (
-    <div className="tag-picker d-flex flex-wrap gap-2" role="group" aria-label="Tag">
+    <div className="tag-picker d-flex flex-wrap gap-2" role="group" aria-label="Subject">
       {tags.map((tag) => (
         <button
           key={tag.id}

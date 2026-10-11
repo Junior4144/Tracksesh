@@ -55,7 +55,7 @@ try {
 
   // Each of these fetches from /api, so they exercise connect-src 'self' too.
   // /tags is last on purpose — the inline-style check below runs on it.
-  for (const path of ['/dashboard', '/activity', '/account', '/tags']) {
+  for (const path of ['/dashboard', '/planner', '/insights', '/account', '/subjects']) {
     await visit(path, path);
   }
 

@@ -3,6 +3,10 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import { AuthProvider } from '@/components/AuthProvider';
 import { TimerProvider } from '@/components/TimerProvider';
 import { Navbar } from '@/components/Navbar';
+import { StudyPlanProvider } from '@/components/StudyPlanProvider';
+import { SessionDock } from '@/components/SessionDock';
+import { useAuth } from '@/components/AuthProvider';
+import PlannerPage from '@/pages/PlannerPage';
 import { AuthOnly, GuestOnly } from '@/routes/guards';
 
 import DashboardPage from '@/pages/DashboardPage';
@@ -32,24 +36,40 @@ export function App() {
     <BrowserRouter>
       <AuthProvider>
         <TimerProvider>
-          <div className="app-shell">
-            <Navbar />
-            <AppRoutes />
-          </div>
+          <StudyPlanProvider>
+            <Workspace />
+          </StudyPlanProvider>
         </TimerProvider>
       </AuthProvider>
     </BrowserRouter>
   );
 }
 
+function Workspace() {
+  const { isLoggedIn } = useAuth();
+  return (
+    <div className={`app-shell${isLoggedIn ? ' suite-shell' : ''}`}>
+      <Navbar />
+      <div className="workspace-content">
+        <AppRoutes />
+      </div>
+      <SessionDock />
+    </div>
+  );
+}
+
 function AppRoutes() {
+  const { user } = useAuth();
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
 
       {/* Routes that read or write the ledger, so they need a user. */}
-      <Route element={<AuthOnly />}>
+      <Route element={<AuthOnly key={user?.id ?? 'guest'} />}>
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/planner" element={<PlannerPage />} />
+        <Route path="/subjects" element={<TagsPage />} />
+        <Route path="/insights" element={<ActivityPage />} />
         <Route path="/activity" element={<ActivityPage />} />
         <Route path="/tags" element={<TagsPage />} />
         <Route path="/account" element={<AccountPage />} />

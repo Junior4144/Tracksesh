@@ -13,9 +13,9 @@ test.afterEach(async ({ page }) => {
   await expect(page.locator('html')).not.toHaveAttribute('data-csp-violation');
 });
 
-async function fixture(page: Page) {
+async function fixture(page: Page, userId = '00000000-0000-4000-8000-000000000001') {
   const user = {
-    id: '00000000-0000-4000-8000-000000000001',
+    id: userId,
     email: 'alex@example.com',
     aud: 'authenticated',
     role: 'authenticated',
@@ -128,7 +128,7 @@ test('all workspaces share responsive neutral presentation', async ({ page }, in
   await fixture(page);
   await page.getByRole('link', { name: 'Tracksesh', exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole('link', { name: 'Open timer' })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: 'Open workspace' })).toHaveAttribute(
     'href',
     '/dashboard',
   );
@@ -136,6 +136,9 @@ test('all workspaces share responsive neutral presentation', async ({ page }, in
     for (const path of [
       '',
       'dashboard',
+      'planner',
+      'subjects',
+      'insights',
       'activity',
       'tags',
       'account',
@@ -251,7 +254,7 @@ test('authentication screens use the same compact layout', async ({ page }, info
       await page.goto(`/${path}`);
       await expect(page.locator('main h1')).toBeVisible();
       await expect(page.getByRole('button', { name: /switch to .* mode/i })).toHaveCount(0);
-      await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(214, 215, 206)');
+      await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(246, 244, 239)');
       if (path === '') {
         await expect(
           page.locator('main').getByRole('link', { name: 'Get started' }),
@@ -288,8 +291,8 @@ test('manual entry, tag editor, and confirmation fit on small screens', async ({
     fullPage: true,
   });
   await page.goto('/tags');
-  await page.getByRole('button', { name: '+ New tag' }).click();
-  await expect(page.getByRole('textbox', { name: 'Tag name' })).toBeVisible();
+  await page.getByRole('button', { name: '+ New subject' }).click();
+  await expect(page.getByRole('textbox', { name: 'Subject name' })).toBeVisible();
   await noOverflow(page);
   await page.screenshot({
     path: `test-results/ui/${info.project.name}/tag-editor.png`,
@@ -301,4 +304,100 @@ test('manual entry, tag editor, and confirmation fit on small screens', async ({
   await expect(page.getByRole('button', { name: 'Cancel', exact: true })).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).not.toBeVisible();
+});
+
+test('SU-04–07 routine and allocation save into Today and survive reload', async ({
+  page,
+}, info) => {
+  await fixture(page);
+  await page.goto('/planner');
+  await page.getByLabel('Start date', { exact: true }).fill('2026-04-01');
+  await page.getByLabel('Custom end date').fill('2026-04-30');
+  await expect(page.locator('.projection-month')).toContainText('10h');
+  await expect(page.locator('.projection-year')).toContainText('121h 40m');
+  await page.getByLabel('Study minutes per day').fill('30');
+  await expect(page.locator('.projection-month')).toContainText('15h');
+  await page.getByLabel('Custom end date').fill('2026-03-31');
+  await expect(page.getByRole('button', { name: 'Save plan', exact: true })).toBeDisabled();
+  await expect(page.getByRole('alert')).toContainText('End date');
+  await page.getByLabel('Custom end date').fill('2026-04-30');
+  await page.screenshot({
+    path: `test-results/ui/${info.project.name}/planner-routine.png`,
+    fullPage: true,
+  });
+  await page.getByRole('button', { name: 'Allocate my time' }).click();
+  await page.getByRole('checkbox', { name: 'Reading', exact: true }).check();
+  await page.getByRole('checkbox', { name: 'Studying', exact: true }).check();
+  await page.getByLabel('Reading priority').fill('2');
+  await expect(page.locator('.study-agenda li').nth(0)).toContainText('50m');
+  await expect(page.locator('.study-agenda li').nth(1)).toContainText('25m');
+  await page.getByLabel('Break minutes').fill('91');
+  await expect(page.getByRole('button', { name: 'Save plan', exact: true })).toBeDisabled();
+  await page.getByLabel('Break minutes').fill('15');
+  await page.getByRole('button', { name: 'Save plan', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Plan saved on this browser');
+  await noOverflow(page);
+  await page.screenshot({
+    path: `test-results/ui/${info.project.name}/planner-allocation.png`,
+    fullPage: true,
+  });
+  await page.getByRole('link', { name: 'Go to Today' }).click();
+  await expect(page.locator('.routine-banner')).toContainText('30 minutes. 7 days');
+  await expect(page.locator('.today-plan')).toContainText('50m');
+  await page.reload();
+  await expect(page.locator('.today-plan')).toContainText('50m');
+  await page.goto('/planner');
+  await expect(page.getByLabel('Study minutes per day')).toHaveValue('30');
+  await page.getByRole('button', { name: 'Reset saved plan' }).click();
+  await expect(page.getByLabel('Study minutes per day')).toHaveValue('20');
+  await page.goto('/dashboard');
+  await expect(page.locator('.routine-banner')).toContainText('What could 20 minutes become?');
+});
+
+test('SU-07 preferences are account-scoped and storage failures are explained', async ({
+  page,
+}) => {
+  await fixture(page);
+  await page.goto('/planner');
+  await page.getByLabel('Study minutes per day').fill('45');
+  await page.getByRole('button', { name: 'Save plan', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Plan saved');
+  await page.evaluate(() => {
+    for (const key of Object.keys(localStorage))
+      if (!key.startsWith('tracksesh:study-plan:')) localStorage.removeItem(key);
+  });
+  await fixture(page, '00000000-0000-4000-8000-000000000002');
+  await page.goto('/planner');
+  await expect(page.getByLabel('Study minutes per day')).toHaveValue('20');
+  await page.evaluate(() => {
+    Storage.prototype.setItem = () => {
+      throw new DOMException('Storage unavailable', 'QuotaExceededError');
+    };
+  });
+  await page.getByRole('button', { name: 'Save plan', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('could not save your plan');
+});
+
+test('SU-08 active timer can stop and label from Planner', async ({ page }) => {
+  await fixture(page);
+  await page.getByRole('button', { name: 'Start', exact: true }).click();
+  await page.getByRole('link', { name: 'Build your routine' }).click();
+  const dock = page.getByRole('complementary', { name: 'Active study session' });
+  await expect(dock).toBeVisible();
+  await dock.getByRole('button', { name: 'Pause', exact: true }).click();
+  await expect(dock).toContainText('Paused');
+  await dock.getByRole('button', { name: 'Resume', exact: true }).click();
+  await dock.getByRole('button', { name: 'Stop', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await page.route('**/api/blocks/100', (route) =>
+    route.fulfill({ status: 500, json: { message: 'Could not save this session.' } }),
+  );
+  await dialog.getByRole('button', { name: 'Save to my day' }).click();
+  await expect(dialog.getByRole('alert')).toContainText('Could not save this session');
+  await page.unroute('**/api/blocks/100');
+  await dialog.getByRole('button', { name: 'Save to my day' }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(dock).not.toBeVisible();
+  await noOverflow(page);
 });

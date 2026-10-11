@@ -20,7 +20,7 @@ export function PageHeader({
   return (
     <header className="page-header">
       <div className="page-heading">
-        <p className="eyebrow">Your time, accounted for</p>
+        <p className="eyebrow">Tracksesh / Study workspace</p>
         <h1>{title}</h1>
         {description && <p className="page-description">{description}</p>}
       </div>

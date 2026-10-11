@@ -46,7 +46,7 @@ export default function TagsPage() {
         setTags(rows);
         setUsage(counts);
       })
-      .catch(() => !cancelled && setError('Could not load your tags.'))
+      .catch(() => !cancelled && setError('Could not load your subjects.'))
       .finally(() => !cancelled && setLoaded(true));
 
     return () => {
@@ -71,7 +71,7 @@ export default function TagsPage() {
       replace(await updateTag(tag.id, patch));
       setEditingId(null);
     } catch (e) {
-      setError(describe(e, 'Could not save that tag.'));
+      setError(describe(e, 'Could not save that subject.'));
     } finally {
       setBusyId(null);
     }
@@ -83,7 +83,7 @@ export default function TagsPage() {
     try {
       replace(await updateTag(tag.id, { is_archived }));
     } catch (e) {
-      setError(describe(e, 'Could not archive that tag.'));
+      setError(describe(e, 'Could not archive that subject.'));
     } finally {
       setBusyId(null);
     }
@@ -106,7 +106,7 @@ export default function TagsPage() {
       });
       setPendingDelete(null);
     } catch (e) {
-      setError(describe(e, 'Could not delete that tag.'));
+      setError(describe(e, 'Could not delete that subject.'));
     } finally {
       setBusyId(null);
     }
@@ -120,7 +120,7 @@ export default function TagsPage() {
       setTags((prev) => [...prev, tag].sort(byName));
       setCreating(false);
     } catch (e) {
-      setError(describe(e, 'Could not create that tag.'));
+      setError(describe(e, 'Could not create that subject.'));
     }
   }
 
@@ -134,12 +134,12 @@ export default function TagsPage() {
 
   return (
     <Page className="tags-page">
-      <PageHeader title="Tags" description="The categories your time is counted under.">
+      <PageHeader title="Subjects" description="Make space for what you want to learn. Your existing categories are all here.">
         <button
           className="btn btn-accent btn-sm fw-semibold"
           onClick={() => setCreating((c) => !c)}
         >
-          + New tag
+          + New subject
         </button>
       </PageHeader>
 
@@ -152,7 +152,7 @@ export default function TagsPage() {
       {creating && (
         <div className="card-surface tag-editor mb-3">
           <TagFields
-            title="New tag"
+            title="New subject"
             initialName=""
             initialColor={nextSlot(tags.length)}
             existing={tags}
@@ -165,7 +165,7 @@ export default function TagsPage() {
       {active.length === 0 && archived.length === 0 ? (
         <div className="empty-state text-center py-5">
           <TagIcon size={26} className="text-muted mb-2" />
-          <p className="fw-semibold mb-1">No tags yet</p>
+          <p className="fw-semibold mb-1">No subjects yet</p>
           <p className="text-muted small mb-0">
             Create one here, or add it while labelling a session.
           </p>
@@ -194,7 +194,7 @@ export default function TagsPage() {
         <>
           <h2 className="h6 fw-semibold text-muted mt-4 mb-2">Archived</h2>
           <p className="text-muted small mb-2">
-            Hidden from the tag pickers. The blocks they label keep their name and colour.
+            Hidden from the subject pickers. The blocks they label keep their name and colour.
           </p>
           <ul className="tag-list list-unstyled mb-0">
             {archived.map((tag) => (
@@ -220,7 +220,7 @@ export default function TagsPage() {
         <ConfirmDialog
           title={`Delete "${pendingDelete.name}"?`}
           body={<DeleteWarning tag={pendingDelete} usage={usage.get(pendingDelete.id)} />}
-          confirmLabel="Delete tag"
+          confirmLabel="Delete subject"
           busy={busyId === pendingDelete.id}
           onConfirm={confirmDelete}
           onCancel={() => setPendingDelete(null)}
@@ -244,7 +244,7 @@ function DeleteWarning({ tag, usage }: { tag: Tag; usage?: TagUsage }) {
       <p className="mb-2">
         <strong>{usage.block_count}</strong> {usage.block_count === 1 ? 'block' : 'blocks'} (
         {formatTotal(usage.total_seconds)}) are labelled with it. They&apos;ll be kept, but they
-        become <strong>unlabelled</strong> and drop out of your per-tag totals. That can&apos;t be
+        become <strong>unlabelled</strong> and drop out of your per-subject totals. That can&apos;t be
         undone.
       </p>
       <p className="mb-0">
@@ -372,10 +372,10 @@ function TagFields({
           className="form-control form-control-sm tag-name-input"
           value={name}
           maxLength={40}
-          placeholder="Tag name"
+          placeholder="Subject name"
           autoFocus
           onChange={(e) => setName(e.target.value)}
-          aria-label="Tag name"
+          aria-label="Subject name"
         />
 
         {/* Eight fixed slots, not a colour picker: the shared palette defines one

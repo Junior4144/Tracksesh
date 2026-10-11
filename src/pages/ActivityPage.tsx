@@ -133,7 +133,7 @@ export default function ActivityPage() {
 
   return (
     <Page className="activity-page">
-      <PageHeader title="Activity" description="See where your hours went.">
+      <PageHeader title="Insights" description="Your recorded effort, in perspective. Explore what you studied and when.">
         <button className="btn btn-accent" onClick={() => setAdding((a) => !a)}>
           + Add time
         </button>
@@ -247,7 +247,7 @@ export default function ActivityPage() {
                 <table className="table table-sm table-hover session-table">
                   <thead>
                     <tr>
-                      <th scope="col">Tag</th>
+                      <th scope="col">Subject</th>
                       <th scope="col">Day</th>
                       <th scope="col">Start</th>
                       <th scope="col">End</th>
