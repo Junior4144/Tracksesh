@@ -34,7 +34,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dapper" Version="2.1.79" />
+    <PackageReference Include="Dapper" Version="2.1.89" />
     <PackageReference Include="Npgsql" Version="10.0.3" />
     <!-- xunit.v3 brings its own runner; no Test.Sdk / VSTest adapter needed. -->
     <PackageReference Include="xunit.v3" Version="4.0.0" />
