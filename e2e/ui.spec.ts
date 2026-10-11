@@ -315,6 +315,22 @@ test('SU-04–07 routine and allocation save into Today and survive reload', asy
   await page.getByLabel('Custom end date').fill('2026-04-30');
   await expect(page.locator('.projection-month')).toContainText('10h');
   await expect(page.locator('.projection-year')).toContainText('121h 40m');
+  const duration = page.getByRole('slider', { name: 'Daily study time' });
+  await duration.focus();
+  await duration.press('ArrowRight');
+  await expect(page.getByLabel('Study minutes per day')).toHaveValue('21');
+  await expect(page.locator('.projection-month')).toContainText('10h 30m');
+  await page.getByRole('button', { name: '45 min', exact: true }).click();
+  await expect(duration).toHaveValue('45');
+  await page.getByRole('button', { name: 'Weekdays', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Saturday', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  );
+  await page.getByRole('button', { name: 'Every day', exact: true }).click();
+  await page.getByLabel('Study minutes per day').fill('180');
+  await expect(duration).toHaveAttribute('max', '720');
+  await expect(duration).toHaveValue('180');
   await page.getByLabel('Study minutes per day').fill('30');
   await expect(page.locator('.projection-month')).toContainText('15h');
   await page.getByLabel('Custom end date').fill('2026-03-31');

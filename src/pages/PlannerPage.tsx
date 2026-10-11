@@ -27,6 +27,7 @@ const days = [
 export default function PlannerPage() {
   const saved = useStudyPlan();
   const [draft, setDraft] = useState<StudyPlan>(saved.plan);
+  const [sliderMax, setSliderMax] = useState(saved.plan.dailyMinutes > 120 ? 720 : 120);
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -59,6 +60,13 @@ export default function PlannerPage() {
     setSaveError('');
   }
   const problem = planError(draft);
+  let weeklyPreview = '';
+  try {
+    const week = projectRoutine(draft.dailyMinutes, draft.weekdays, draft.startDate, 'week');
+    weeklyPreview = `${formatMinutes(week.minutes)} a week across ${week.days} study ${week.days === 1 ? 'day' : 'days'}`;
+  } catch {
+    // The validation message below explains incomplete or invalid inputs.
+  }
   const selected = draft.subjects.filter((s) => tags.some((t) => t.id === s.id));
   let allocation: number[] = [];
   let allocationError = '';
@@ -81,6 +89,7 @@ export default function PlannerPage() {
     if (failure) setSaveError(failure);
     else {
       setDraft(defaultPlan());
+      setSliderMax(120);
       setMessage('Saved plan reset.');
       setSaveError('');
     }
@@ -133,24 +142,101 @@ export default function PlannerPage() {
           <section className="suite-card planner-inputs" aria-labelledby="routine-title">
             <p className="eyebrow">01 / Your rhythm</p>
             <h2 id="routine-title">Small sessions. Lasting progress.</h2>
-            <label className="form-label" htmlFor="daily-minutes">
-              Study minutes per day
-            </label>
-            <div className="number-with-unit">
+            <div className="daily-duration">
+              <label htmlFor="daily-duration-slider">How much time feels right?</label>
+              <div className="daily-duration-value">
+                <strong>
+                  {Number.isFinite(draft.dailyMinutes) && draft.dailyMinutes > 0
+                    ? formatMinutes(draft.dailyMinutes)
+                    : '—'}
+                </strong>
+                <span>per study day</span>
+              </div>
+              <p className="duration-preview">
+                {weeklyPreview || 'Choose your minutes and study days below.'}
+              </p>
               <input
-                id="daily-minutes"
-                className="form-control"
-                type="number"
+                id="daily-duration-slider"
+                className="study-duration-slider"
+                type="range"
                 min="1"
-                max="720"
+                max={sliderMax}
                 step="1"
-                value={Number.isNaN(draft.dailyMinutes) ? '' : draft.dailyMinutes}
+                aria-label="Daily study time"
+                aria-valuetext={`${draft.dailyMinutes} minutes per study day`}
+                aria-describedby="duration-hint"
+                value={
+                  Number.isFinite(draft.dailyMinutes)
+                    ? Math.min(sliderMax, Math.max(1, draft.dailyMinutes))
+                    : 1
+                }
+                style={{
+                  backgroundSize: `${Number.isFinite(draft.dailyMinutes) ? Math.min(100, Math.max(0, ((draft.dailyMinutes - 1) / (sliderMax - 1)) * 100)) : 0}% 6px, 100% 6px`,
+                }}
                 onChange={(e) => update({ dailyMinutes: e.target.valueAsNumber })}
               />
-              <span>minutes</span>
+              <div className="duration-scale" aria-hidden="true">
+                <span>1 min</span>
+                <span>{sliderMax / 2 / 60} hr</span>
+                <span>{sliderMax / 60} hr</span>
+              </div>
+              <div className="duration-presets" role="group" aria-label="Quick study durations">
+                {[15, 20, 30, 45, 60].map((minutes) => (
+                  <button
+                    type="button"
+                    key={minutes}
+                    aria-pressed={draft.dailyMinutes === minutes}
+                    onClick={() => {
+                      setSliderMax(120);
+                      update({ dailyMinutes: minutes });
+                    }}
+                  >
+                    {minutes} min
+                  </button>
+                ))}
+              </div>
+              <div className="duration-exact">
+                <label htmlFor="daily-minutes">Study minutes per day</label>
+                <input
+                  id="daily-minutes"
+                  className="form-control"
+                  type="number"
+                  min="1"
+                  max="720"
+                  step="1"
+                  value={Number.isNaN(draft.dailyMinutes) ? '' : draft.dailyMinutes}
+                  onChange={(e) => {
+                    setSliderMax(e.target.valueAsNumber > 120 ? 720 : 120);
+                    update({ dailyMinutes: e.target.valueAsNumber });
+                  }}
+                />
+              </div>
+              <p id="duration-hint" className="field-hint">
+                Drag to explore, pick a shortcut, or enter exact minutes (up to 720).
+              </p>
             </div>
             <fieldset className="weekday-field">
               <legend>Study days</legend>
+              <div className="weekday-shortcuts" role="group" aria-label="Study day shortcuts">
+                <button
+                  type="button"
+                  aria-pressed={draft.weekdays.length === 7}
+                  onClick={() => update({ weekdays: [1, 2, 3, 4, 5, 6, 0] })}
+                >
+                  Every day
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={
+                    draft.weekdays.length === 5 &&
+                    [1, 2, 3, 4, 5].every((day) => draft.weekdays.includes(day))
+                  }
+                  onClick={() => update({ weekdays: [1, 2, 3, 4, 5] })}
+                >
+                  Weekdays
+                </button>
+                <span>{draft.weekdays.length} days a week</span>
+              </div>
               <div className="weekday-picker">
                 {days.map((day) => (
                   <button

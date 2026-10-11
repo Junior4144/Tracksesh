@@ -79,3 +79,68 @@ map to responsive route screenshots and existing UI workflows.
 Intentional limits: plans are browser-local, projections are estimates, and
 allocation is a reusable time budget separate from the daily routine. There is
 no AI runtime, automatic scheduling, or deployment in this change.
+
+## Homepage refinement — 2026-10-11
+
+Replaced the public split-column introduction with a centered editorial hero,
+scoped guest navigation, a clearly labelled illustrative workspace, and an
+interactive daily-minutes preview (explicit 30/365-day assumptions). Existing
+sign-in, registration and signed-in destinations are retained. Workspace styling
+is unaffected. Verified six responsive route checks, slider results under the
+production CSP, typecheck, lint, 96 unit tests and frontend/.NET builds. API result
+remains 54 passing and eight blocked by unavailable local Postgres.
+
+## Extended verification — 2026-10-11
+
+The reported Vite `ECONNREFUSED` errors were caused by the API not running.
+Started `npm run api`; both `:5251/api/health` and the Vite proxy at
+`:5173/api/health` return 200. Development requires both the API and Vite.
+
+Added eight stateful browser scenarios in `e2e/study-suite.spec.ts`, backed by
+`e2e/study-fixture.ts`. These verify manual session creation/editing/deletion,
+cancelled and failed deletion, save retry without duplicate records, global
+timer completion on Insights, calendar month navigation, subject lifecycle,
+corrupt plan recovery and weekday validation, plus keyboard operation of the
+homepage calculator at 320px. These fixtures exercise UI request/state behavior;
+they do not establish database validation or RLS correctness.
+
+Fixed three issues in Insights:
+
+- Refresh records when a dock session is stopped, labelled, skipped or discarded.
+- Navigate actual calendar months instead of stepping 30 days and skipping February.
+- Keep a failed deletion in its dialog with an accessible error and retry action.
+
+Updated live dashboard checks to the suite's actual responsive layout and routes.
+Hosted checks read existing demo data; stateful mutation tests use isolated fixtures.
+
+| Check | Result |
+|---|---|
+| TypeScript and ESLint | Pass |
+| Vitest | 96 passed |
+| Deployment configuration/smoke unit checks | 11 passed |
+| Full Playwright UI suite (1440px, 1120px, 360px) | 102 passed; 3 live email recovery tests skipped |
+| Live sign-in, ledger and refresh (`test:live`) | 2 passed including setup |
+| Live dashboard/navigation (`e2e`) | 10 passed including setup |
+| New workflows against production SPA, mobile | 8 passed |
+| Production CSP and console check | Pass, no violations or console errors |
+| Vite production build | Pass; existing bundle-size advisory remains |
+| .NET build | Pass, zero warnings/errors |
+| API suite | 54 passed; 8 failed to connect to local Postgres |
+
+Remaining verification gaps: local Postgres at `127.0.0.1:54322` is unavailable,
+and Docker/local Postgres are not installed in this environment. Therefore the
+eight database isolation checks are not verified. The three live email recovery
+checks require a configured local Supabase admin key and mail service; deterministic
+recovery tests pass. No deployment or production database mutation was performed.
+To close these gaps, start the disposable local Supabase stack and rerun
+`npm run test:api` and the live recovery checks with their documented local settings.
+
+## Routine slider refinement — 2026-10-11
+
+Daily minutes now use a keyboard-accessible slider (1–120 minutes initially),
+a prominent duration and immediate weekly estimate, plus 15/20/30/45/60-minute
+presets. The exact input retains the 1–720-minute contract and expands the slider
+range for longer sessions. Weekday/every-day shortcuts retain individual toggles.
+Projections, validation and account-scoped persistence use the same plan values.
+The existing SU-04–07 browser scenario now verifies keyboard changes, presets,
+weekday shortcuts and extended-range synchronization across three viewports.

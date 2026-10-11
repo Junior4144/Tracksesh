@@ -1,7 +1,7 @@
 ﻿import { test, expect } from '@playwright/test';
 
-// Live integration layout checks. UI fixture coverage lives in ui.spec.ts.
-test.describe('dashboard layout', () => {
+// Read-only live integration checks; mutations are covered by stateful fixtures.
+test.describe('study suite with live data', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/dashboard');
     await expect(
@@ -9,33 +9,35 @@ test.describe('dashboard layout', () => {
     ).toBeVisible();
   });
 
-  test('stopwatch precedes recent sessions on mobile and shares a row on desktop', async ({
+  test('timer precedes history and sits alongside the plan on wide screens', async ({
     page,
   }, info) => {
     const timer = (await page.locator('.timer-workspace').boundingBox())!;
     const recent = (await page.locator('.recent-blocks').boundingBox())!;
-    if (info.project.name === 'mobile')
-      expect(timer.y + timer.height).toBeLessThanOrEqual(recent.y);
-    else {
-      expect(timer.x + timer.width).toBeLessThan(recent.x);
-      expect(Math.abs(timer.y - recent.y)).toBeLessThan(16);
+    if (info.project.name === 'laptop') {
+      expect(timer.x + timer.width).toBeLessThanOrEqual(recent.x);
+    } else expect(timer.y + timer.height).toBeLessThanOrEqual(recent.y);
+    if (info.project.name === 'desktop') {
+      const plan = (await page.locator('.today-plan').boundingBox())!;
+      expect(Math.abs(timer.y - plan.y)).toBeLessThan(16);
     }
   });
 
-  test('guidance can be dismissed without moving the stopwatch', async ({ page }) => {
-    const restore = page.getByRole('button', { name: /how tracksesh works/i });
-    if (await restore.isVisible()) await restore.click();
-    const before = (await page.locator('.timer-workspace').boundingBox())!;
-    const scrollBefore = await page.evaluate(() => window.scrollY);
-    await page.getByRole('button', { name: /close a ledger/i }).click();
-    await expect(page.locator('.info-panel')).toHaveCount(0);
-    const after = (await page.locator('.timer-workspace').boundingBox())!;
-    const scrollAfter = await page.evaluate(() => window.scrollY);
-    expect(after.x).toBe(before.x);
-    // Mobile clicks scroll the lower guide into view. Compare document positions
-    // so normal scrolling is not mistaken for a layout shift.
-    expect(after.y + scrollAfter).toBeCloseTo(before.y + scrollBefore, 1);
-    await expect(restore).toBeVisible();
+  test('suite navigation loads planner, subjects and recorded insights', async ({ page }) => {
+    for (const name of ['Planner', 'Subjects', 'Insights']) {
+      const response = page.waitForResponse((r) =>
+        new URL(r.url()).pathname.startsWith(name === 'Insights' ? '/api/blocks' : '/api/tags'),
+      );
+      await page.getByRole('link', { name, exact: true }).click();
+      expect((await response).ok()).toBe(true);
+      await expect(
+        page.getByRole('heading', {
+          name: name === 'Planner' ? 'Make room for learning.' : name,
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(page.getByText(/couldn.t load|could not load/i)).toHaveCount(0);
+    }
   });
 
   test('nothing overflows horizontally', async ({ page }) => {
