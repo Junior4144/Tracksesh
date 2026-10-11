@@ -1,4 +1,6 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
+import { BrowserRouter, Route, Routes } from 'react-router';
+import { PageMetadata } from '@/components/PageMetadata';
+import NotFoundPage from '@/pages/NotFoundPage';
 
 import { AuthProvider } from '@/components/AuthProvider';
 import { TimerProvider } from '@/components/TimerProvider';
@@ -34,6 +36,7 @@ import LinkExpiredPage from '@/pages/LinkExpiredPage';
 export function App() {
   return (
     <BrowserRouter>
+      <PageMetadata />
       <AuthProvider>
         <TimerProvider>
           <StudyPlanProvider>
@@ -101,8 +104,7 @@ function AppRoutes() {
       <Route path="/auth/confirm" element={<AuthConfirmPage />} />
       <Route path="/auth/link-expired" element={<LinkExpiredPage />} />
 
-      {/* Mirrors the Angular `{ path: '**', redirectTo: 'dashboard' }` catch-all. */}
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }

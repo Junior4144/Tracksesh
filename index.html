@@ -4,28 +4,25 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light" />
-    <!--
-      TS.png, not favicon.ico — this is what the app used before the migration
-      (`icons: { icon: '/TS.png' }` in the old layout.tsx). favicon.ico stays in
-      public/ because browsers and crawlers request that path unprompted, but
-      the declared icon wins wherever one is honoured.
-    -->
-    <link rel="icon" type="image/png" sizes="32x32" href="/TS.png" />
-    <link rel="apple-touch-icon" href="/TS.png" />
+    <link rel="icon" type="image/x-icon" sizes="16x16 32x32 48x48" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/tracksesh-icon-48.png" />
+    <link rel="icon" type="image/svg+xml" sizes="any" href="/tracksesh-icon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/tracksesh-icon-180.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#2c6553" />
 
     <!--
-      This shell is the only HTML a crawler or a link scraper ever sees, because
-      everything below it is rendered by React in the browser.
-
-      The public homepage and protected workspace render on the client.
-      The metadata below supplies the shared link preview.
+      The production build fills the homepage root from the shared public React
+      component. Other routes use a separate, noindex application shell.
     -->
-    <title>Tracksesh</title>
-    <meta name="description" content="Your study workspace. Plan your time, find your focus, and see your learning add up." />
-    <meta property="og:title" content="Tracksesh" />
-    <meta property="og:description" content="Your study workspace. Plan your time, find your focus, and see your learning add up." />
+    <title>Study Time Tracker &amp; Study Planner | Tracksesh</title>
+    <meta name="description" content="Track study time by subject, plan your study routine, and review your actual hours. Pause for breaks, record focused sessions, and explore the Tracksesh demo." />
+    <link rel="canonical" href="https://tracksesh.com/" />
+    <meta property="og:url" content="https://tracksesh.com/" />
+    <meta property="og:title" content="Study Time Tracker &amp; Study Planner | Tracksesh" />
+    <meta property="og:description" content="Plan time by subject, track focused study sessions, and review your actual hours with Tracksesh." />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="/TS.png" />
+    <meta property="og:image" content="https://tracksesh.com/tracksesh-icon-512.png" />
     <meta name="twitter:card" content="summary" />
   </head>
   <body>

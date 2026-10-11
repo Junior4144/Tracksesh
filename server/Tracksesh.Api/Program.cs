@@ -234,9 +234,8 @@ app.Map("/api/{**rest}", () => Results.NotFound());
 /*
  * The built SPA, served from wwwroot by this same process.
  *
- * MapFallbackToFile is what makes client-side routing work on a cold load:
- * without it, opening /activity directly asks this server for a file that
- * doesn't exist.
+ * The homepage is prerendered at build time. Known workspace routes use a
+ * separate noindex shell; unknown routes return that shell with a real 404.
  */
 app.UseDefaultFiles();
 // HTML selects the release's hashed assets and handles one-time auth callbacks.
@@ -245,7 +244,7 @@ var spaFiles = new StaticFileOptions
 {
     OnPrepareResponse = context =>
     {
-        if (context.File.Name.Equals("index.html", StringComparison.OrdinalIgnoreCase))
+        if (context.File.Name.EndsWith(".html", StringComparison.OrdinalIgnoreCase))
         {
             context.Context.Response.Headers.CacheControl = "no-store, max-age=0";
             context.Context.Response.Headers.Pragma = "no-cache";
@@ -253,6 +252,6 @@ var spaFiles = new StaticFileOptions
     }
 };
 app.UseStaticFiles(spaFiles);
-app.MapFallbackToFile("index.html", spaFiles);
+app.MapWorkspaceFallback();
 
 app.Run();

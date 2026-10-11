@@ -127,6 +127,9 @@ jobs:
       - name: CSP check
         run: npm run test:csp
 
+      - name: Public SEO and routing checks
+        run: npm run test:seo
+
       - name: Admin HTTP access checks
         run: node scripts/check-admin-access.mjs
 

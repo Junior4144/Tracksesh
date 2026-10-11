@@ -8,6 +8,15 @@ record focus sessions, and review actual effort. React (Vite) + ASP.NET Core
 + Supabase, Bootstrap 5. The current design and acceptance criteria are in
 [docs/STUDY-SUITE-SPEC.md](docs/STUDY-SUITE-SPEC.md).
 
+The production build prerenders the public homepage from `HomeContent.tsx`.
+The interactive app replaces that preview on startup. Workspace and account
+routes receive a separate `app.html` with `noindex`; unknown routes return 404.
+Keep the server's `SpaRoutes` list aligned with `src/App.tsx` when adding routes.
+The public sitemap lists only the homepage. Both hosts declare the existing
+indexed `https://tracksesh.com/` canonical; no host redirect moves existing
+browser-local sign-ins or plans. After `npm run build` and starting the API,
+run `npm run test:seo` to verify production HTML, navigation metadata and status codes.
+
 The Planner projects calendar weeks, months, years and custom date ranges,
 and allocates a time budget after breaks. Saved plans are browser-local and
 scoped to the signed-in account; recorded sessions remain server-backed.

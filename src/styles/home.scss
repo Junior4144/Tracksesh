@@ -1,4 +1,4 @@
-﻿// Public landing page only. Workspace and authentication styles stay independent.
+// Public landing page only. Workspace and authentication styles stay independent.
 .landing-page {
   width: min(100%, 1240px);
   padding: 0 40px 32px;
@@ -541,4 +541,15 @@
     align-items: start;
     font-size: 10px;
   }
+}
+.landing-guide {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 36px 0 56px;
+
+  h2 { font-size: clamp(22px, 3vw, 30px); margin: 24px 0 18px; }
+  p { color: #57515f; line-height: 1.8; }
+  details { padding: 16px 0; border-bottom: 1px solid #e5e0e8; }
+  summary { cursor: pointer; font-weight: 600; }
+  details p { margin: 14px 0 0; }
 }

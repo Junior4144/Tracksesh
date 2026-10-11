@@ -1,8 +1,8 @@
 import { PasswordInput } from '@/components/PasswordInput';
 import { AuthLayout } from '@/components/ui/AuthLayout';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/components/AuthProvider';
 import { AlertIcon, CheckCircleIcon, LockIcon } from '@/components/icons';
@@ -16,6 +16,10 @@ interface RegisterForm {
 export default function RegisterPage() {
   const { register: registerUser } = useAuth();
   const navigate = useNavigate();
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (hash === '#demo') document.getElementById('demo')?.scrollIntoView();
+  }, [hash]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -142,7 +146,7 @@ export default function RegisterPage() {
         </form>
       )}
 
-      <div className="demo-box mt-3">
+      <div id="demo" className="demo-box mt-3">
         <div className="demo-box__header">
           <LockIcon size={13} />
           Try the demo
