@@ -12,7 +12,7 @@
 #     STARTUP from the environment. None of it belongs in a layer.
 
 # ── 1. The SPA ──────────────────────────────────────────────────────────────
-FROM node:24-alpine AS spa
+FROM node:26-alpine AS spa
 WORKDIR /src
 
 # Dependencies first, so a source-only change doesn't re-run npm ci.
