@@ -46,7 +46,7 @@ COPY --from=spa /src/server/Tracksesh.Api/wwwroot server/Tracksesh.Api/wwwroot
 RUN dotnet publish server/Tracksesh.Api/Tracksesh.Api.csproj -c Release -o /app --no-restore
 
 # ── 3. Runtime ──────────────────────────────────────────────────────────────
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:11.0 AS runtime
 WORKDIR /app
 
 COPY --from=api /app .
